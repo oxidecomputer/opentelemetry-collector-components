@@ -3,7 +3,7 @@ module github.com/oxidecomputer/oxidereceiver
 go 1.25.0
 
 require (
-	github.com/oxidecomputer/oxide.go v0.6.1-0.20250830010724-75e4f83ec80b
+	github.com/oxidecomputer/oxide.go v0.6.1-0.20251014190524-bd541f49bce2
 	go.opentelemetry.io/collector/component v1.39.0
 	go.opentelemetry.io/collector/consumer v1.39.0
 	go.opentelemetry.io/collector/pdata v1.39.0

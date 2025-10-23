@@ -82,6 +82,10 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 
 	startTime := time.Now()
 	results := make([]*oxide.OxqlQueryResult, len(s.metricNames))
+
+	// Track latencies for each request by metric name
+	latencies := make(map[string]time.Duration)
+
 	for idx, metricName := range s.metricNames {
 		query := fmt.Sprintf("get %s | filter timestamp > @now() - %dm | last 1", metricName, 15)
 		group.Go(func() error {
@@ -92,6 +96,7 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 				},
 			})
 			elapsed := time.Since(goroStartTime)
+			latencies[metricName] = elapsed
 			s.logger.Info("scrape query finished", zap.String("metric", metricName), zap.String("query", query), zap.Float64("latency", elapsed.Seconds()))
 			if err != nil {
 				return err
@@ -247,10 +252,41 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 			}
 		}
 	}
+
+	s.addLatencyMetrics(metrics, latencies)
+
 	return metrics, nil
 }
 
-func addPoint(pointFactory func() pmetric.NumberDataPoint, table oxide.Table, series oxide.Timeseries, logger *zap.Logger) {
+// addLatencyMetrics creates a gauge metric for API request latencies, with
+// each request labeled by metric name. We'll use this to track performance of
+// oximeter and the receiver, and identify slow queries.
+func (s *oxideScraper) addLatencyMetrics(metrics pmetric.Metrics, latencies map[string]time.Duration) {
+	rm := metrics.ResourceMetrics().AppendEmpty()
+	rm.Resource().Attributes().PutStr("receiver", "oxide")
+
+	sm := rm.ScopeMetrics().AppendEmpty()
+	m := sm.Metrics().AppendEmpty()
+
+	m.SetName("oxide.receiver.api.request.duration")
+	m.SetDescription("Duration of API requests to the Oxide API")
+	m.SetUnit("s")
+
+	gauge := m.SetEmptyGauge()
+
+	now := pcommon.NewTimestampFromTime(time.Now())
+
+	for metricName, duration := range latencies {
+		dp := gauge.DataPoints().AppendEmpty()
+		dp.SetTimestamp(now)
+		dp.SetDoubleValue(duration.Seconds())
+
+		// Add the metric name as a label
+		dp.Attributes().PutStr("request_name", metricName)
+	}
+}
+
+func addPoint(pointFactory func() pmetric.NumberDataPoint, table oxide.OxqlTable, series oxide.Timeseries, logger *zap.Logger) {
 	for _, point := range series.Points.Values {
 		switch point.Values.Type {
 		case oxide.ValueArrayTypeInteger:
