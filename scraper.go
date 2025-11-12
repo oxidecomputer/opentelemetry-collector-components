@@ -316,13 +316,14 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 	return metrics, nil
 }
 
-func addPoint(pointFactory func() pmetric.NumberDataPoint, table oxide.OxqlTable, series oxide.Timeseries, logger *zap.Logger) {
+func addPoint(pointFactory func() pmetric.NumberDataPoint, table oxide.OxqlTable, series oxide.Timeseries, logger *zap.Logger) ([]pmetric.NumberDataPoint, error) {
+	points := []pmetric.NumberDataPoint{}
 	for _, point := range series.Points.Values {
 		switch point.Values.Type {
 		case oxide.ValueArrayTypeInteger:
 			values, ok := point.Values.Values.([]any)
 			if !ok {
-				logger.Warn("couldn't cast values to []any", zap.Any("values", point.Values.Values), zap.String("metric", table.Name), zap.Reflect("type", reflect.TypeOf(point.Values.Values)))
+				return nil, fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %+v", point.Values.Values, table.Name, reflect.TypeOf(point.Values.Values))
 			}
 			for idx, value := range values {
 				if value == nil {
@@ -330,16 +331,17 @@ func addPoint(pointFactory func() pmetric.NumberDataPoint, table oxide.OxqlTable
 				}
 				intValue, ok := value.(float64)
 				if !ok {
-					logger.Warn("couldn't cast value to float", zap.Any("value", value), zap.String("metric", table.Name))
+					return nil, fmt.Errorf("couldn't cast value %+v for metric %s to float; got type %+v", value, table.Name, reflect.TypeOf(value))
 				}
 				dp := pointFactory()
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(series.Points.Timestamps[idx]))
 				dp.SetIntValue(int64(intValue))
+				points = append(points, dp)
 			}
 		case oxide.ValueArrayTypeDouble:
 			values, ok := point.Values.Values.([]any)
 			if !ok {
-				logger.Warn("couldn't cast values to []any", zap.Any("values", point.Values.Values), zap.String("metric", table.Name), zap.Reflect("type", reflect.TypeOf(point.Values.Values)))
+				return nil, fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %+v", point.Values.Values, table.Name, reflect.TypeOf(point.Values.Values))
 			}
 			for idx, value := range values {
 				if value == nil {
@@ -347,16 +349,17 @@ func addPoint(pointFactory func() pmetric.NumberDataPoint, table oxide.OxqlTable
 				}
 				floatValue, ok := value.(float64)
 				if !ok {
-					logger.Warn("couldn't cast value to float", zap.Any("values", point.Values.Values), zap.String("metric", table.Name), zap.Reflect("type", reflect.TypeOf(point.Values.Values)))
+					return nil, fmt.Errorf("couldn't cast value %+v for metric %s to float; got type %+v", value, table.Name, reflect.TypeOf(value))
 				}
 				dp := pointFactory()
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(series.Points.Timestamps[idx]))
 				dp.SetDoubleValue(floatValue)
+				points = append(points, dp)
 			}
 		case oxide.ValueArrayTypeBoolean:
 			values, ok := point.Values.Values.([]any)
 			if !ok {
-				logger.Warn("couldn't cast values to []any", zap.Any("values", point.Values.Values), zap.String("metric", table.Name))
+				return nil, fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %+v", point.Values.Values, table.Name, reflect.TypeOf(point.Values.Values))
 			}
 			for idx, value := range values {
 				if value == nil {
@@ -364,7 +367,7 @@ func addPoint(pointFactory func() pmetric.NumberDataPoint, table oxide.OxqlTable
 				}
 				boolValue, ok := value.(bool)
 				if !ok {
-					logger.Warn("couldn't cast value to float", zap.Any("values", point.Values.Values), zap.String("metric", table.Name), zap.Reflect("type", reflect.TypeOf(point.Values.Values)))
+					return nil, fmt.Errorf("couldn't cast value %+v for metric %s to bool; got type %+v", value, table.Name, reflect.TypeOf(value))
 				}
 				dp := pointFactory()
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(series.Points.Timestamps[idx]))
@@ -373,11 +376,13 @@ func addPoint(pointFactory func() pmetric.NumberDataPoint, table oxide.OxqlTable
 					intValue = 1
 				}
 				dp.SetIntValue(int64(intValue))
+				points = append(points, dp)
 			}
 		default:
 			logger.Info("Unhandled metric value type:", zap.Reflect("Type", point.Values.Type))
 		}
 	}
+	return points, nil
 }
 
 // addQuantiles emits metrics for a slice of oxide.Quantile values. In addition
