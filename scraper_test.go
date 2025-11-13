@@ -237,7 +237,7 @@ func TestAddPoint(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dataPoints := pmetric.NewNumberDataPointSlice()
 
-			points, err := addPoint(dataPoints, table, tc.series)
+			err := addPoint(dataPoints, table, tc.series)
 
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
@@ -245,10 +245,10 @@ func TestAddPoint(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Len(t, points, len(tc.wantMetrics))
+			require.Equal(t, len(tc.wantMetrics), dataPoints.Len())
 
 			for idx, wantMetric := range tc.wantMetrics {
-				err := pmetrictest.CompareNumberDataPoint(wantMetric, points[idx])
+				err := pmetrictest.CompareNumberDataPoint(wantMetric, dataPoints.At(idx))
 				require.NoError(t, err, "mismatch at index %d", idx)
 			}
 		})
@@ -420,7 +420,7 @@ func TestAddHistogram(t *testing.T) {
 			histogramDataPoints := pmetric.NewHistogramDataPointSlice()
 			quantileGauge := pmetric.NewGauge()
 
-			histPoints, quantilePoints, err := addHistogram(histogramDataPoints, quantileGauge, table, tc.series)
+			err := addHistogram(histogramDataPoints, quantileGauge, table, tc.series)
 
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
@@ -428,16 +428,16 @@ func TestAddHistogram(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Len(t, histPoints, len(tc.wantMetrics))
-			require.Len(t, quantilePoints, len(tc.wantQuantiles))
+			require.Equal(t, len(tc.wantMetrics), histogramDataPoints.Len())
+			require.Equal(t, len(tc.wantQuantiles), quantileGauge.DataPoints().Len())
 
 			for idx, wantMetric := range tc.wantMetrics {
-				err := pmetrictest.CompareHistogramDataPoints(wantMetric, histPoints[idx])
+				err := pmetrictest.CompareHistogramDataPoints(wantMetric, histogramDataPoints.At(idx))
 				require.NoError(t, err, "mismatch at index %d", idx)
 			}
 
 			for idx, wantQuantile := range tc.wantQuantiles {
-				err := pmetrictest.CompareNumberDataPoint(wantQuantile, quantilePoints[idx])
+				err := pmetrictest.CompareNumberDataPoint(wantQuantile, quantileGauge.DataPoints().At(idx))
 				require.NoError(t, err, "mismatch at quantile index %d", idx)
 			}
 		})
