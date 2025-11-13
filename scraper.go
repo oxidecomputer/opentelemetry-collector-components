@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"regexp"
 	"slices"
 	"sort"
@@ -290,13 +289,17 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 }
 
 func addHistogram(dataPoints pmetric.HistogramDataPointSlice, quantileGauge pmetric.Gauge, table oxide.OxqlTable, series oxide.Timeseries) error {
+	timestamps := series.Points.Timestamps
 	for idx, point := range series.Points.Values {
 		dp := dataPoints.AppendEmpty()
 		dp.SetTimestamp(pcommon.NewTimestampFromTime(series.Points.Timestamps[idx]))
 
 		values, ok := point.Values.Values.([]any)
 		if !ok {
-			return fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %+v", point.Values.Values, table.Name, reflect.TypeOf(point.Values.Values))
+			return fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %T", point.Values.Values, table.Name, point.Values.Values)
+		}
+		if len(timestamps) != len(values) {
+			return fmt.Errorf("invariant violated: number of timestamps %d must match number of values %d", len(timestamps), len(values))
 		}
 		for _, value := range values {
 			// The histogram value is an `any`, so marshal and unmarshal json to fit it into the appropriate distribution type.
@@ -307,7 +310,7 @@ func addHistogram(dataPoints pmetric.HistogramDataPointSlice, quantileGauge pmet
 
 			switch point.Values.Type {
 			case oxide.ValueArrayTypeIntegerDistribution:
-				// Unmarshall the marshalled JSON back to the expected histogram type.
+				// Unmarshal the marshalled JSON back to the expected histogram type.
 				var distValue oxide.Distributionint64
 				if err := json.Unmarshal(marshalled, &distValue); err != nil {
 					return fmt.Errorf("couldn't unmarshal distribution %+v for metric %s: %w", value, table.Name, err)
@@ -326,10 +329,11 @@ func addHistogram(dataPoints pmetric.HistogramDataPointSlice, quantileGauge pmet
 					total += count
 				}
 				dp.SetCount(uint64(total))
+				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
 
 				addQuantiles(quantileGauge, []oxide.Quantile{distValue.P50, distValue.P90, distValue.P99}, dp.Timestamp())
 			case oxide.ValueArrayTypeDoubleDistribution:
-				// Unmarshall the marshalled JSON back to the expected histogram type.
+				// Unmarshal the marshalled JSON back to the expected histogram type.
 				var distValue oxide.Distributiondouble
 				if err := json.Unmarshal(marshalled, &distValue); err != nil {
 					return fmt.Errorf("couldn't unmarshal distribution %+v for metric %s: %w", value, table.Name, err)
@@ -348,6 +352,7 @@ func addHistogram(dataPoints pmetric.HistogramDataPointSlice, quantileGauge pmet
 					total += count
 				}
 				dp.SetCount(uint64(total))
+				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
 
 				addQuantiles(quantileGauge, []oxide.Quantile{distValue.P50, distValue.P90, distValue.P99}, dp.Timestamp())
 			}
@@ -357,12 +362,16 @@ func addHistogram(dataPoints pmetric.HistogramDataPointSlice, quantileGauge pmet
 }
 
 func addPoint(dataPoints pmetric.NumberDataPointSlice, table oxide.OxqlTable, series oxide.Timeseries) error {
+	timestamps := series.Points.Timestamps
 	for _, point := range series.Points.Values {
 		switch point.Values.Type {
 		case oxide.ValueArrayTypeInteger:
 			values, ok := point.Values.Values.([]any)
 			if !ok {
-				return fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %+v", point.Values.Values, table.Name, reflect.TypeOf(point.Values.Values))
+				return fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %T", point.Values.Values, table.Name, point.Values.Values)
+			}
+			if len(timestamps) != len(values) {
+				return fmt.Errorf("invariant violated: number of timestamps %d must match number of values %d", len(timestamps), len(values))
 			}
 			for idx, value := range values {
 				if value == nil {
@@ -370,16 +379,16 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, table oxide.OxqlTable, se
 				}
 				intValue, ok := value.(float64)
 				if !ok {
-					return fmt.Errorf("couldn't cast value %+v for metric %s to float; got type %+v", value, table.Name, reflect.TypeOf(value))
+					return fmt.Errorf("couldn't cast value %+v for metric %s to float; got type %T", value, table.Name, value)
 				}
 				dp := dataPoints.AppendEmpty()
-				dp.SetTimestamp(pcommon.NewTimestampFromTime(series.Points.Timestamps[idx]))
+				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
 				dp.SetIntValue(int64(intValue))
 			}
 		case oxide.ValueArrayTypeDouble:
 			values, ok := point.Values.Values.([]any)
 			if !ok {
-				return fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %+v", point.Values.Values, table.Name, reflect.TypeOf(point.Values.Values))
+				return fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %T", point.Values.Values, table.Name, point.Values.Values)
 			}
 			for idx, value := range values {
 				if value == nil {
@@ -387,7 +396,7 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, table oxide.OxqlTable, se
 				}
 				floatValue, ok := value.(float64)
 				if !ok {
-					return fmt.Errorf("couldn't cast value %+v for metric %s to float; got type %+v", value, table.Name, reflect.TypeOf(value))
+					return fmt.Errorf("couldn't cast value %+v for metric %s to float; got type %T", value, table.Name, value)
 				}
 				dp := dataPoints.AppendEmpty()
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(series.Points.Timestamps[idx]))
@@ -396,7 +405,7 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, table oxide.OxqlTable, se
 		case oxide.ValueArrayTypeBoolean:
 			values, ok := point.Values.Values.([]any)
 			if !ok {
-				return fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %+v", point.Values.Values, table.Name, reflect.TypeOf(point.Values.Values))
+				return fmt.Errorf("couldn't cast values %+v for metric %s to []any; got unexpected type %T", point.Values.Values, table.Name, point.Values.Values)
 			}
 			for idx, value := range values {
 				if value == nil {
@@ -404,7 +413,7 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, table oxide.OxqlTable, se
 				}
 				boolValue, ok := value.(bool)
 				if !ok {
-					return fmt.Errorf("couldn't cast value %+v for metric %s to bool; got type %+v", value, table.Name, reflect.TypeOf(value))
+					return fmt.Errorf("couldn't cast value %+v for metric %s to bool; got type %T", value, table.Name, value)
 				}
 				dp := dataPoints.AppendEmpty()
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(series.Points.Timestamps[idx]))
