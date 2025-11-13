@@ -235,12 +235,7 @@ func TestAddPoint(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			metrics := pmetric.NewMetrics()
-			rm := metrics.ResourceMetrics().AppendEmpty()
-			sm := rm.ScopeMetrics().AppendEmpty()
-			m := sm.Metrics().AppendEmpty()
-			gauge := m.SetEmptyGauge()
-			dataPoints := gauge.DataPoints()
+			dataPoints := pmetric.NewNumberDataPointSlice()
 
 			points, err := addPoint(dataPoints, table, tc.series)
 
@@ -422,16 +417,10 @@ func TestAddHistogram(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			metrics := pmetric.NewMetrics()
-			rm := metrics.ResourceMetrics().AppendEmpty()
-			sm := rm.ScopeMetrics().AppendEmpty()
-			m := sm.Metrics().AppendEmpty()
-			histogram := m.SetEmptyHistogram()
+			histogramDataPoints := pmetric.NewHistogramDataPointSlice()
+			quantileGauge := pmetric.NewGauge()
 
-			quantileMetric := sm.Metrics().AppendEmpty()
-			quantileGauge := quantileMetric.SetEmptyGauge()
-
-			histPoints, quantilePoints, err := addHistogram(histogram.DataPoints(), quantileGauge, table, tc.series)
+			histPoints, quantilePoints, err := addHistogram(histogramDataPoints, quantileGauge, table, tc.series)
 
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
