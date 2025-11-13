@@ -32,6 +32,7 @@ type oxideScraper struct {
 	apiRequestDuration metric.Float64Gauge
 	scrapeCount        metric.Int64Counter
 	scrapeDuration     metric.Float64Gauge
+	metricParseErrors  metric.Int64Counter
 }
 
 func newOxideScraper(
@@ -101,6 +102,15 @@ func (s *oxideScraper) Start(ctx context.Context, _ component.Host) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create scrapeDuration gauge: %w", err)
+	}
+
+	s.metricParseErrors, err = meter.Int64Counter(
+		"oxide_receiver.metric.parse_errors",
+		metric.WithDescription("Number of errors encountered while parsing individual metrics"),
+		metric.WithUnit("{error}"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create metricParseErrors counter: %w", err)
 	}
 
 	return nil
@@ -231,11 +241,21 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 					quantiles.SetName(fmt.Sprintf("%s:quantiles", table.Name))
 					quantileGauge := quantiles.SetEmptyGauge()
 
-					addHistogram(measure.DataPoints(), quantileGauge, table, series)
+					if _, _, err := addHistogram(measure.DataPoints(), quantileGauge, table, series); err != nil {
+						s.logger.Warn("failed to add histogram metric", zap.String("metric", table.Name), zap.Error(err))
+						s.metricParseErrors.Add(ctx, 1, metric.WithAttributes(
+							attribute.String("metric_name", table.Name),
+						))
+					}
 				// Handle scalar gauge.
 				case v0.MetricType == oxide.MetricTypeGauge:
 					measure := m.SetEmptyGauge()
-					addPoint(measure.DataPoints(), table, series)
+					if _, err := addPoint(measure.DataPoints(), table, series); err != nil {
+						s.logger.Warn("failed to add gauge metric", zap.String("metric", table.Name), zap.Error(err))
+						s.metricParseErrors.Add(ctx, 1, metric.WithAttributes(
+							attribute.String("metric_name", table.Name),
+						))
+					}
 
 				// Handle scalar counter.
 				default:
@@ -250,7 +270,12 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 						measure.SetIsMonotonic(true)
 					}
 
-					addPoint(measure.DataPoints(), table, series)
+					if _, err := addPoint(measure.DataPoints(), table, series); err != nil {
+						s.logger.Warn("failed to add sum metric", zap.String("metric", table.Name), zap.Error(err))
+						s.metricParseErrors.Add(ctx, 1, metric.WithAttributes(
+							attribute.String("metric_name", table.Name),
+						))
+					}
 				}
 
 			}
