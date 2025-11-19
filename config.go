@@ -15,7 +15,12 @@ type Config struct {
 	MetricPatterns    []string `mapstructure:"metric_patterns"`
 	ScrapeConcurrency int      `mapstructure:"scrape_concurrency"`
 
-	// AddLabels configures the receiver to add human-readable labels to metrics using the Oxide API.
+	// QueryLookback configures the lookback interval of queries
+	// sent to the Oxide API.
+	QueryLookback string `mapstructure:"query_lookback"`
+
+	// AddLabels configures the receiver to add human-readable labels to
+	// metrics using the Oxide API.
 	AddLabels bool `mapstructure:"add_labels"`
 }
 

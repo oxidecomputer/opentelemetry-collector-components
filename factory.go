@@ -25,6 +25,7 @@ func createDefaultConfig() component.Config {
 	return &Config{
 		MetricPatterns:    []string{".*"},
 		ScrapeConcurrency: 25,
+		QueryLookback:     "5m",
 	}
 }
 
