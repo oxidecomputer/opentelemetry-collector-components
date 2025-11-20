@@ -1,0 +1,34 @@
+receivers:
+  oxide:
+    # Note: uncomment to configure Oxide API. By default, the collector uses $OXIDE_PROFILE.
+    # host: ${env:OXIDE_HOST}
+    # token: ${env:OXIDE_TOKEN}
+    metric_patterns:
+    - virtual_machine:.*
+    - virtual_disk:.*
+    - hardware_component:.*
+    collection_interval: 60s
+
+processors:
+  batch:
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:9091"
+
+service:
+  telemetry:
+    metrics:
+      level: detailed
+      readers:
+      - pull:
+          exporter:
+            prometheus:
+              host: 0.0.0.0
+              port: 8888
+
+  pipelines:
+    metrics:
+      receivers: [oxide]
+      processors: [batch]
+      exporters: [prometheus]

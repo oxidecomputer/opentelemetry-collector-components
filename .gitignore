@@ -27,3 +27,9 @@ go.work.sum
 # Editor/IDE
 .idea/
 .vscode/
+
+# Otel collector build artifacts
+dist/
+
+# Local collector config
+collector/config.yaml

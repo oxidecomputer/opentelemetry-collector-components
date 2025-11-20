@@ -1,0 +1,56 @@
+# Adapted from
+# https://github.com/open-telemetry/opentelemetry-collector-releases/blob/main/distributions/otelcol-contrib/manifest.yaml,
+# adding the oxide receiver.
+
+dist:
+  module: github.com/oxidecomputer/otelcol-oxide
+  name: otelcol-oxide
+  description: OpenTelemetry Collector with Oxide receiver
+  version: 0.1.0
+  output_path: ./dist
+  build_tags: "grpcnotrace"
+
+extensions:
+  - gomod: go.opentelemetry.io/collector/extension/zpagesextension v0.140.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.140.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.140.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.140.1
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.140.0
+  - gomod: go.opentelemetry.io/collector/exporter/nopexporter v0.140.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.140.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.140.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.140.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.140.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.140.1
+
+processors:
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.140.0
+  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.140.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.140.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.140.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.140.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.140.1
+
+receivers:
+  - gomod: go.opentelemetry.io/collector/receiver/nopreceiver v0.140.0
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.140.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.140.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.140.1
+
+  # Add the Oxide receiver.
+  - gomod: github.com/oxidecomputer/oxidereceiver v0.1.0
+
+connectors:
+  - gomod: go.opentelemetry.io/collector/connector/forwardconnector v0.140.0
+
+providers:
+  - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.46.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.46.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/httpprovider v1.46.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/httpsprovider v1.46.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.46.0
+
+replaces:
+  - github.com/oxidecomputer/oxidereceiver => ..
