@@ -131,7 +131,7 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 	latencies := make([]time.Duration, len(s.metricNames))
 
 	for idx, metricName := range s.metricNames {
-		query := fmt.Sprintf("get %s | filter timestamp > @now() - %dm | last 1", metricName, 15)
+		query := fmt.Sprintf("get %s | filter timestamp > @now() - %s | last 1", metricName, s.cfg.QueryLookback)
 		group.Go(func() error {
 			goroStartTime := time.Now()
 			result, err := s.client.SystemTimeseriesQuery(ctx, oxide.SystemTimeseriesQueryParams{
