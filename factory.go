@@ -2,8 +2,6 @@ package oxidereceiver
 
 import (
 	"context"
-	"crypto/tls"
-	"net/http"
 
 	"github.com/oxidecomputer/oxide.go/oxide"
 	"go.opentelemetry.io/collector/component"
@@ -31,25 +29,24 @@ func createDefaultConfig() component.Config {
 	}
 }
 
-// makeOxideConfig creates an oxide.Config from the receiver Config.
-func makeOxideConfig(cfg *Config) *oxide.Config {
-	oxideConfig := &oxide.Config{
-		Host:  cfg.Host,
-		Token: cfg.Token,
+// makeOxideClientOptions creates an oxide.ClientOption slice from the receiver Config.
+func makeOxideClientOptions(cfg *Config) []oxide.ClientOption {
+	var opts []oxide.ClientOption
+
+	// Set `Host` and `Token` if defined; setting to empty strings would override the relevant
+	// environment variables in the SDK.
+	if cfg.Host != "" {
+		opts = append(opts, oxide.WithHost(cfg.Host))
+	}
+	if cfg.Token != "" {
+		opts = append(opts, oxide.WithToken(cfg.Token))
 	}
 
-	// Configure custom HTTP client if InsecureSkipVerify is enabled.
 	if cfg.InsecureSkipVerify {
-		oxideConfig.HTTPClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
-			},
-		}
+		opts = append(opts, oxide.WithInsecureSkipVerify())
 	}
 
-	return oxideConfig
+	return opts
 }
 
 // makeMetricsReceiver creates a metrics receiver based on the provided config.
@@ -61,15 +58,17 @@ func makeMetricsReceiver(
 ) (receiver.Metrics, error) {
 	rCfg := baseCfg.(*Config)
 
-	oxideConfig := makeOxideConfig(rCfg)
-
-	client, err := oxide.NewClient(oxideConfig)
+	client, err := oxide.NewClient(makeOxideClientOptions(rCfg)...)
 	if err != nil {
 		return nil, err
 	}
 
 	r := newOxideScraper(rCfg, settings.TelemetrySettings, client)
-	s, err := scraper.NewMetrics(r.Scrape, scraper.WithStart(r.Start), scraper.WithShutdown(r.Shutdown))
+	s, err := scraper.NewMetrics(
+		r.Scrape,
+		scraper.WithStart(r.Start),
+		scraper.WithShutdown(r.Shutdown),
+	)
 	if err != nil {
 		return nil, err
 	}
