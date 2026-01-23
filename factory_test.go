@@ -1,14 +1,16 @@
 package oxidereceiver
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/oxidecomputer/oxide.go/oxide"
 	"github.com/stretchr/testify/require"
 )
 
-func TestMakeOxideConfig(t *testing.T) {
+func TestMakeOxideClientOptions(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -17,47 +19,51 @@ func TestMakeOxideConfig(t *testing.T) {
 	for _, tc := range []struct {
 		name               string
 		insecureSkipVerify bool
-		expectHTTPClient   bool
 		canConnectToTLS    bool
 	}{
 		{
 			name:               "skip verify",
 			insecureSkipVerify: true,
-			expectHTTPClient:   true,
 			canConnectToTLS:    true,
 		},
 		{
 			name:               "verify",
 			insecureSkipVerify: false,
-			expectHTTPClient:   false,
 			canConnectToTLS:    false,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := &Config{
 				Host:               ts.URL,
+				Token:              "test-token",
 				InsecureSkipVerify: tc.insecureSkipVerify,
 			}
 
-			oxideConfig := makeOxideConfig(cfg)
+			opts := makeOxideClientOptions(cfg)
 
-			require.Equal(t, ts.URL, oxideConfig.Host)
+			client, err := oxide.NewClient(opts...)
+			require.NoError(t, err)
 
-			if tc.expectHTTPClient {
-				require.NotNil(t, oxideConfig.HTTPClient, "HTTPClient should be set when InsecureSkipVerify is true")
+			resp, err := client.MakeRequest(context.Background(), oxide.Request{
+				Method: http.MethodGet,
+				Path:   "/",
+			})
 
-				// Verify the client can connect to the test server with self-signed cert.
-				resp, err := oxideConfig.HTTPClient.Get(ts.URL)
-				require.NoError(t, err, "Should be able to connect with InsecureSkipVerify=true")
-				require.NotNil(t, resp)
-				resp.Body.Close()
+			if tc.canConnectToTLS {
+				require.NoError(t, err)
+				_ = resp.Body.Close()
 			} else {
-				require.Nil(t, oxideConfig.HTTPClient, "HTTPClient should be nil when InsecureSkipVerify is false")
-
-				// Verify a default client cannot connect to the test server with self-signed cert.
-				defaultClient := &http.Client{}
-				_, err := defaultClient.Get(ts.URL)
-				require.Error(t, err, "Should not be able to connect with default client to self-signed cert")
+				require.Error(
+					t,
+					err,
+					"Should not be able to connect with InsecureSkipVerify=false to self-signed cert",
+				)
+				require.Contains(
+					t,
+					err.Error(),
+					"certificate",
+					"Error should be about certificate verification",
+				)
 			}
 		})
 	}

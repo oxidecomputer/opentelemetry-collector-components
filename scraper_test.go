@@ -12,21 +12,18 @@ import (
 )
 
 func TestAddLabels(t *testing.T) {
-	table := oxide.OxqlTable{Name: "test_metric"}
 
 	for _, tc := range []struct {
 		name         string
 		series       oxide.Timeseries
 		wantResource pcommon.Resource
-		wantErr      string
 	}{
 		{
 			name: "string: success",
 			series: oxide.Timeseries{
 				Fields: map[string]oxide.FieldValue{
 					"hostname": {
-						Type:  oxide.FieldValueTypeString,
-						Value: "server-01",
+						Value: &oxide.FieldValueString{Value: "server-01"},
 					},
 				},
 			},
@@ -41,8 +38,7 @@ func TestAddLabels(t *testing.T) {
 			series: oxide.Timeseries{
 				Fields: map[string]oxide.FieldValue{
 					"port": {
-						Type:  oxide.FieldValueTypeI64,
-						Value: float64(8080),
+						Value: &oxide.FieldValueI64{Value: oxide.NewPointer(8080)},
 					},
 				},
 			},
@@ -57,8 +53,7 @@ func TestAddLabels(t *testing.T) {
 			series: oxide.Timeseries{
 				Fields: map[string]oxide.FieldValue{
 					"instance_id": {
-						Type:  oxide.FieldValueTypeUuid,
-						Value: "550e8400-e29b-41d4-a716-446655440000",
+						Value: &oxide.FieldValueUuid{Value: "550e8400-e29b-41d4-a716-446655440000"},
 					},
 				},
 			},
@@ -69,40 +64,25 @@ func TestAddLabels(t *testing.T) {
 			}(),
 		},
 		{
-			name: "string: type assertion error",
+			name: "bool: success",
 			series: oxide.Timeseries{
 				Fields: map[string]oxide.FieldValue{
-					"hostname": {
-						Type:  oxide.FieldValueTypeString,
-						Value: 123,
+					"active": {
+						Value: &oxide.FieldValueBool{Value: oxide.NewPointer(true)},
 					},
 				},
 			},
-			wantErr: "couldn't cast label",
-		},
-		{
-			name: "int field: type assertion error",
-			series: oxide.Timeseries{
-				Fields: map[string]oxide.FieldValue{
-					"port": {
-						Type:  oxide.FieldValueTypeI64,
-						Value: "not a number",
-					},
-				},
-			},
-			wantErr: "couldn't cast label",
+			wantResource: func() pcommon.Resource {
+				r := pcommon.NewResource()
+				r.Attributes().PutBool("active", true)
+				return r
+			}(),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			resource := pcommon.NewResource()
 
-			err := addLabels(tc.series, table, resource)
-
-			if tc.wantErr != "" {
-				require.ErrorContains(t, err, tc.wantErr)
-				return
-			}
-			require.NoError(t, err)
+			addLabels(tc.series, resource)
 
 			require.Equal(t, tc.wantResource.Attributes().AsRaw(), resource.Attributes().AsRaw())
 		})
@@ -163,7 +143,6 @@ func TestEnrichLabels(t *testing.T) {
 
 func TestAddPoint(t *testing.T) {
 	now := time.Now()
-	table := oxide.OxqlTable{Name: "test_metric"}
 
 	for _, tc := range []struct {
 		name        string
@@ -180,8 +159,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Type:   oxide.ValueArrayTypeInteger,
-								Values: []any{float64(42)},
+								Values: &oxide.ValueArrayInteger{Values: []int{42}},
 							},
 						},
 					},
@@ -196,40 +174,6 @@ func TestAddPoint(t *testing.T) {
 				}(),
 			},
 		},
-		{
-			name: "int: type assertion error on outer array",
-			series: oxide.Timeseries{
-				Points: oxide.Points{
-					Timestamps: []time.Time{now},
-					Values: []oxide.Values{
-						{
-							Values: oxide.ValueArray{
-								Type:   oxide.ValueArrayTypeInteger,
-								Values: "not an array",
-							},
-						},
-					},
-				},
-			},
-			wantErr: "couldn't cast values",
-		},
-		{
-			name: "int: type assertion error on value",
-			series: oxide.Timeseries{
-				Points: oxide.Points{
-					Timestamps: []time.Time{now},
-					Values: []oxide.Values{
-						{
-							Values: oxide.ValueArray{
-								Type:   oxide.ValueArrayTypeInteger,
-								Values: []any{"not a number"},
-							},
-						},
-					},
-				},
-			},
-			wantErr: "couldn't cast value",
-		},
 		// Doubles
 		{
 			name: "double: success",
@@ -239,8 +183,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Type:   oxide.ValueArrayTypeDouble,
-								Values: []any{float64(42.5)},
+								Values: &oxide.ValueArrayDouble{Values: []float64{42.5}},
 							},
 						},
 					},
@@ -255,40 +198,6 @@ func TestAddPoint(t *testing.T) {
 				}(),
 			},
 		},
-		{
-			name: "double: type assertion error on outer array",
-			series: oxide.Timeseries{
-				Points: oxide.Points{
-					Timestamps: []time.Time{now},
-					Values: []oxide.Values{
-						{
-							Values: oxide.ValueArray{
-								Type:   oxide.ValueArrayTypeDouble,
-								Values: "not an array",
-							},
-						},
-					},
-				},
-			},
-			wantErr: "couldn't cast values",
-		},
-		{
-			name: "double: type assertion error on value",
-			series: oxide.Timeseries{
-				Points: oxide.Points{
-					Timestamps: []time.Time{now},
-					Values: []oxide.Values{
-						{
-							Values: oxide.ValueArray{
-								Type:   oxide.ValueArrayTypeDouble,
-								Values: []any{"not a number"},
-							},
-						},
-					},
-				},
-			},
-			wantErr: "couldn't cast value",
-		},
 		// Bools
 		{
 			name: "bool: success",
@@ -298,8 +207,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Type:   oxide.ValueArrayTypeBoolean,
-								Values: []any{true},
+								Values: &oxide.ValueArrayBoolean{Values: []bool{true}},
 							},
 						},
 					},
@@ -314,45 +222,28 @@ func TestAddPoint(t *testing.T) {
 				}(),
 			},
 		},
+		// Error case: unexpected type
 		{
-			name: "bool: type assertion error on outer array",
+			name: "unexpected type",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
 					Timestamps: []time.Time{now},
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Type:   oxide.ValueArrayTypeBoolean,
-								Values: "not an array",
+								Values: &oxide.ValueArrayString{Values: []string{"not a number"}},
 							},
 						},
 					},
 				},
 			},
-			wantErr: "couldn't cast values",
-		},
-		{
-			name: "bool: type assertion error on value",
-			series: oxide.Timeseries{
-				Points: oxide.Points{
-					Timestamps: []time.Time{now},
-					Values: []oxide.Values{
-						{
-							Values: oxide.ValueArray{
-								Type:   oxide.ValueArrayTypeBoolean,
-								Values: []any{"not a boolean"},
-							},
-						},
-					},
-				},
-			},
-			wantErr: "couldn't cast value",
+			wantErr: "unexpected metric value type",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dataPoints := pmetric.NewNumberDataPointSlice()
 
-			err := addPoint(dataPoints, table, tc.series)
+			err := addPoint(dataPoints, tc.series)
 
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
@@ -461,22 +352,14 @@ func TestAddHistogram(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Type: oxide.ValueArrayTypeIntegerDistribution,
-								Values: []any{
-									oxide.Distributionint64{
-										Bins:   []int{0, 1, 2},
-										Counts: []int{1, 2, 3},
-										P50: oxide.Quantile{
-											MarkerHeights: []float64{0.0, 1.0, 1.5, 1.8, 2.0},
-											P:             0.5,
-										},
-										P90: oxide.Quantile{
-											MarkerHeights: []float64{0.0, 1.0, 1.9, 1.95, 2.0},
-											P:             0.9,
-										},
-										P99: oxide.Quantile{
-											MarkerHeights: []float64{0.0, 1.0, 1.99, 1.995, 2.0},
-											P:             0.99,
+								Values: &oxide.ValueArrayIntegerDistribution{
+									Values: []oxide.Distributionint64{
+										{
+											Bins:   []int{0, 1, 2},
+											Counts: []int{1, 2, 3},
+											P50:    1.5,
+											P90:    1.9,
+											P99:    1.99,
 										},
 									},
 								},
@@ -527,22 +410,14 @@ func TestAddHistogram(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Type: oxide.ValueArrayTypeDoubleDistribution,
-								Values: []any{
-									oxide.Distributiondouble{
-										Bins:   []float64{0.0, 1.0, 2.0},
-										Counts: []int{1, 2, 3},
-										P50: oxide.Quantile{
-											MarkerHeights: []float64{0.0, 1.0, 1.5, 1.8, 2.0},
-											P:             0.5,
-										},
-										P90: oxide.Quantile{
-											MarkerHeights: []float64{0.0, 1.0, 1.9, 1.95, 2.0},
-											P:             0.9,
-										},
-										P99: oxide.Quantile{
-											MarkerHeights: []float64{0.0, 1.0, 1.99, 1.995, 2.0},
-											P:             0.99,
+								Values: &oxide.ValueArrayDoubleDistribution{
+									Values: []oxide.Distributiondouble{
+										{
+											Bins:   []float64{0.0, 1.0, 2.0},
+											Counts: []int{1, 2, 3},
+											P50:    1.5,
+											P90:    1.9,
+											P99:    1.99,
 										},
 									},
 								},
@@ -586,21 +461,20 @@ func TestAddHistogram(t *testing.T) {
 			},
 		},
 		{
-			name: "cast error: values not []any",
+			name: "unexpected type",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
 					Timestamps: []time.Time{now},
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Type:   oxide.ValueArrayTypeIntegerDistribution,
-								Values: "not an array",
+								Values: &oxide.ValueArrayInteger{Values: []int{1, 2, 3}},
 							},
 						},
 					},
 				},
 			},
-			wantErr: "couldn't cast values",
+			wantErr: "unexpected histogram type",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -619,12 +493,18 @@ func TestAddHistogram(t *testing.T) {
 			require.Equal(t, len(tc.wantQuantiles), quantileGauge.DataPoints().Len())
 
 			for idx, wantMetric := range tc.wantMetrics {
-				err := pmetrictest.CompareHistogramDataPoints(wantMetric, histogramDataPoints.At(idx))
+				err := pmetrictest.CompareHistogramDataPoints(
+					wantMetric,
+					histogramDataPoints.At(idx),
+				)
 				require.NoError(t, err, "mismatch at index %d", idx)
 			}
 
 			for idx, wantQuantile := range tc.wantQuantiles {
-				err := pmetrictest.CompareNumberDataPoint(wantQuantile, quantileGauge.DataPoints().At(idx))
+				err := pmetrictest.CompareNumberDataPoint(
+					wantQuantile,
+					quantileGauge.DataPoints().At(idx),
+				)
 				require.NoError(t, err, "mismatch at quantile index %d", idx)
 			}
 		})
