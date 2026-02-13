@@ -159,7 +159,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Values: &oxide.ValueArrayInteger{Values: []int{42}},
+								Value: &oxide.ValueArrayInteger{Values: []int{42}},
 							},
 						},
 					},
@@ -183,7 +183,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Values: &oxide.ValueArrayDouble{Values: []float64{42.5}},
+								Value: &oxide.ValueArrayDouble{Values: []float64{42.5}},
 							},
 						},
 					},
@@ -207,7 +207,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Values: &oxide.ValueArrayBoolean{Values: []bool{true}},
+								Value: &oxide.ValueArrayBoolean{Values: []bool{true}},
 							},
 						},
 					},
@@ -231,7 +231,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Values: &oxide.ValueArrayString{Values: []string{"not a number"}},
+								Value: &oxide.ValueArrayString{Values: []string{"not a number"}},
 							},
 						},
 					},
@@ -352,7 +352,7 @@ func TestAddHistogram(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Values: &oxide.ValueArrayIntegerDistribution{
+								Value: &oxide.ValueArrayIntegerDistribution{
 									Values: []oxide.Distributionint64{
 										{
 											Bins:   []int{0, 1, 2},
@@ -410,7 +410,7 @@ func TestAddHistogram(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Values: &oxide.ValueArrayDoubleDistribution{
+								Value: &oxide.ValueArrayDoubleDistribution{
 									Values: []oxide.Distributiondouble{
 										{
 											Bins:   []float64{0.0, 1.0, 2.0},
@@ -468,7 +468,7 @@ func TestAddHistogram(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Values: &oxide.ValueArrayInteger{Values: []int{1, 2, 3}},
+								Value: &oxide.ValueArrayInteger{Values: []int{1, 2, 3}},
 							},
 						},
 					},
