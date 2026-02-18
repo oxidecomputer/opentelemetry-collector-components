@@ -143,6 +143,7 @@ func TestEnrichLabels(t *testing.T) {
 
 func TestAddPoint(t *testing.T) {
 	now := time.Now()
+	startTime := now.Add(-time.Hour)
 
 	for _, tc := range []struct {
 		name        string
@@ -152,7 +153,7 @@ func TestAddPoint(t *testing.T) {
 	}{
 		// Ints
 		{
-			name: "int: success",
+			name: "int: no start times",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
 					Timestamps: []time.Time{now},
@@ -174,11 +175,37 @@ func TestAddPoint(t *testing.T) {
 				}(),
 			},
 		},
+		{
+			name: "int: with start times",
+			series: oxide.Timeseries{
+				Points: oxide.Points{
+					StartTimes: []time.Time{startTime},
+					Timestamps: []time.Time{now},
+					Values: []oxide.Values{
+						{
+							Values: oxide.ValueArray{
+								Value: &oxide.ValueArrayInteger{Values: []int{42}},
+							},
+						},
+					},
+				},
+			},
+			wantMetrics: []pmetric.NumberDataPoint{
+				func() pmetric.NumberDataPoint {
+					dp := pmetric.NewNumberDataPoint()
+					dp.SetIntValue(42)
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
+					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
+					return dp
+				}(),
+			},
+		},
 		// Doubles
 		{
 			name: "double: success",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
+					StartTimes: []time.Time{startTime},
 					Timestamps: []time.Time{now},
 					Values: []oxide.Values{
 						{
@@ -193,6 +220,7 @@ func TestAddPoint(t *testing.T) {
 				func() pmetric.NumberDataPoint {
 					dp := pmetric.NewNumberDataPoint()
 					dp.SetDoubleValue(42.5)
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
 					return dp
 				}(),
@@ -203,6 +231,7 @@ func TestAddPoint(t *testing.T) {
 			name: "bool: success",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
+					StartTimes: []time.Time{startTime},
 					Timestamps: []time.Time{now},
 					Values: []oxide.Values{
 						{
@@ -217,6 +246,7 @@ func TestAddPoint(t *testing.T) {
 				func() pmetric.NumberDataPoint {
 					dp := pmetric.NewNumberDataPoint()
 					dp.SetIntValue(1)
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
 					return dp
 				}(),
@@ -227,6 +257,7 @@ func TestAddPoint(t *testing.T) {
 			name: "unexpected type",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
+					StartTimes: []time.Time{startTime},
 					Timestamps: []time.Time{now},
 					Values: []oxide.Values{
 						{
@@ -335,6 +366,7 @@ func TestAddSiloUtilizationMetrics(t *testing.T) {
 
 func TestAddHistogram(t *testing.T) {
 	now := time.Now()
+	startTime := now.Add(-time.Hour)
 	table := oxide.OxqlTable{Name: "test_metric"}
 
 	for _, tc := range []struct {
@@ -348,6 +380,7 @@ func TestAddHistogram(t *testing.T) {
 			name: "int: success",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
+					StartTimes: []time.Time{startTime},
 					Timestamps: []time.Time{now},
 					Values: []oxide.Values{
 						{
@@ -371,6 +404,7 @@ func TestAddHistogram(t *testing.T) {
 			wantMetrics: []pmetric.HistogramDataPoint{
 				func() pmetric.HistogramDataPoint {
 					dp := pmetric.NewHistogramDataPoint()
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
 					dp.SetCount(6) // 1+2+3
 					dp.ExplicitBounds().FromRaw([]float64{0, 1, 2})
@@ -406,6 +440,7 @@ func TestAddHistogram(t *testing.T) {
 			name: "double: success",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
+					StartTimes: []time.Time{startTime},
 					Timestamps: []time.Time{now},
 					Values: []oxide.Values{
 						{
@@ -429,6 +464,7 @@ func TestAddHistogram(t *testing.T) {
 			wantMetrics: []pmetric.HistogramDataPoint{
 				func() pmetric.HistogramDataPoint {
 					dp := pmetric.NewHistogramDataPoint()
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
 					dp.SetCount(6) // 1+2+3
 					dp.ExplicitBounds().FromRaw([]float64{0.0, 1.0, 2.0})
@@ -464,6 +500,7 @@ func TestAddHistogram(t *testing.T) {
 			name: "unexpected type",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
+					StartTimes: []time.Time{startTime},
 					Timestamps: []time.Time{now},
 					Values: []oxide.Values{
 						{

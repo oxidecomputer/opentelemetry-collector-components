@@ -168,14 +168,12 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 	s.scrapeDuration.Record(ctx, elapsed.Seconds())
 	s.scrapeCount.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "success")))
 
-	// Cache mappings from resource UUIDs to human-readable names. Note: we
-	// can also add mappings for higher-cardinality resources like
-	// instances and disks, but this would add more latency to the 0th
-	// query on the page.
+	// Cache mappings from resource UUIDs to human-readable names. Note: we can also add mappings
+	// for higher-cardinality resources like instances and disks, but this would add more latency to
+	// the 0th query on the page.
 	//
-	// TODO: add human-readable labels to metrics in oximeter so that we
-	// don't have to enrich them here. Tracked in
-	// https://github.com/oxidecomputer/omicron/issues/9119.
+	// TODO: add human-readable labels to metrics in oximeter so that we don't have to enrich them
+	// here. Tracked in https://github.com/oxidecomputer/omicron/issues/9119.
 	siloToName := map[string]string{}
 	projectToName := map[string]string{}
 	if s.cfg.AddLabels {
@@ -186,9 +184,8 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 		for _, silo := range silos {
 			siloToName[silo.Id] = string(silo.Name)
 		}
-		// Note: this only lists projects in the silo corresponding to
-		// the client's authentication token. In the future, we can
-		// either add a system endpoint listing all projects for the
+		// Note: this only lists projects in the silo corresponding to the client's authentication
+		// token. In the future, we can either add a system endpoint listing all projects for the
 		// rack, or enrich metrics with project labels in nexus.
 		projects, err := s.client.ProjectListAllPages(ctx, oxide.ProjectListParams{})
 		if err != nil {
@@ -230,21 +227,16 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 				switch {
 				// Handle histograms.
 				//
-				// Note: OxQL histograms include both buckets
-				// and counts, as well as a handful of
-				// preselected quantiles estimated using the P²
-				// algorithm. We extract the buckets and counts
-				// as an otel histogram, and the quantiles as a
-				// gauge.
+				// Note: OxQL histograms include both buckets and counts, as well as a handful of
+				// preselected quantiles estimated using the P² algorithm. We extract the buckets
+				// and counts as an otel histogram, and the quantiles as a gauge.
 				case slices.Contains([]oxide.ValueArrayType{oxide.ValueArrayTypeIntegerDistribution, oxide.ValueArrayTypeDoubleDistribution}, v0.Values.Type()):
 					measure := m.SetEmptyHistogram()
-
-					switch v0.MetricType {
-					case oxide.MetricTypeDelta:
-						measure.SetAggregationTemporality(pmetric.AggregationTemporalityDelta)
-					case oxide.MetricTypeCumulative:
-						measure.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
-					}
+					// Always set aggregation temporality to cumulative. OxQL has both delta and
+					// cumulative counters, but both counter types use a cumulative value for their
+					// 0th observation. Because we add "| last 1" to all OxQL queries, all counter
+					// metrics are effectively of type cumulative for our purposes.
+					measure.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 
 					quantiles := sm.Metrics().AppendEmpty()
 					quantiles.SetName(fmt.Sprintf("%s:quantiles", table.Name))
@@ -282,15 +274,12 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 				// Handle scalar counter.
 				default:
 					measure := m.SetEmptySum()
-
-					switch v0.MetricType {
-					case oxide.MetricTypeDelta:
-						measure.SetAggregationTemporality(pmetric.AggregationTemporalityDelta)
-						measure.SetIsMonotonic(true)
-					case oxide.MetricTypeCumulative:
-						measure.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
-						measure.SetIsMonotonic(true)
-					}
+					// Always set aggregation temporality to cumulative. OxQL has both delta and
+					// cumulative counters, but both counter types use a cumulative value for their
+					// 0th observation. Because we add "| last 1" to all OxQL queries, all counter
+					// metrics are effectively of type cumulative for our purposes.
+					measure.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+					measure.SetIsMonotonic(true)
 
 					if err := addPoint(measure.DataPoints(), series); err != nil {
 						s.logger.Warn(
@@ -440,9 +429,13 @@ func addHistogram(
 	series oxide.Timeseries,
 ) error {
 	timestamps := series.Points.Timestamps
+	startTimes := series.Points.StartTimes
 	for idx, point := range series.Points.Values {
 		dp := dataPoints.AppendEmpty()
-		dp.SetTimestamp(pcommon.NewTimestampFromTime(series.Points.Timestamps[idx]))
+		dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+		if len(startTimes) > 0 {
+			dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+		}
 
 		switch v := point.Values.Value.(type) {
 		case *oxide.ValueArrayIntegerDistribution:
@@ -518,6 +511,8 @@ func addHistogram(
 
 func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) error {
 	timestamps := series.Points.Timestamps
+	startTimes := series.Points.StartTimes
+	hasStartTimes := len(startTimes) > 0
 	for _, point := range series.Points.Values {
 		switch v := point.Values.Value.(type) {
 		case *oxide.ValueArrayInteger:
@@ -531,6 +526,9 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) 
 			for idx, intValue := range v.Values {
 				dp := dataPoints.AppendEmpty()
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+				if hasStartTimes {
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+				}
 				dp.SetIntValue(int64(intValue))
 			}
 		case *oxide.ValueArrayDouble:
@@ -544,6 +542,9 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) 
 			for idx, floatValue := range v.Values {
 				dp := dataPoints.AppendEmpty()
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+				if hasStartTimes {
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+				}
 				dp.SetDoubleValue(floatValue)
 			}
 		case *oxide.ValueArrayBoolean:
@@ -557,6 +558,9 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) 
 			for idx, boolValue := range v.Values {
 				dp := dataPoints.AppendEmpty()
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+				if hasStartTimes {
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+				}
 				intValue := 0
 				if boolValue {
 					intValue = 1
