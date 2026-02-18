@@ -444,7 +444,7 @@ func addHistogram(
 		dp := dataPoints.AppendEmpty()
 		dp.SetTimestamp(pcommon.NewTimestampFromTime(series.Points.Timestamps[idx]))
 
-		switch v := point.Values.Values.(type) {
+		switch v := point.Values.Value.(type) {
 		case *oxide.ValueArrayIntegerDistribution:
 			if len(timestamps) != len(v.Values) {
 				return fmt.Errorf(
@@ -508,7 +508,7 @@ func addHistogram(
 		default:
 			return fmt.Errorf(
 				"unexpected histogram type %T for metric %s",
-				point.Values.Values,
+				point.Values.Value,
 				table.Name,
 			)
 		}
@@ -519,7 +519,7 @@ func addHistogram(
 func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) error {
 	timestamps := series.Points.Timestamps
 	for _, point := range series.Points.Values {
-		switch v := point.Values.Values.(type) {
+		switch v := point.Values.Value.(type) {
 		case *oxide.ValueArrayInteger:
 			if len(timestamps) != len(v.Values) {
 				return fmt.Errorf(
@@ -564,7 +564,7 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) 
 				dp.SetIntValue(int64(intValue))
 			}
 		default:
-			return fmt.Errorf("got unexpected metric value type %T", point.Values.Values)
+			return fmt.Errorf("got unexpected metric value type %T", point.Values.Value)
 		}
 	}
 	return nil
