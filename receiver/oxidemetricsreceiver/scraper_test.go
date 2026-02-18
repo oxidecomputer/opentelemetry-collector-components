@@ -1,4 +1,4 @@
-package oxidereceiver
+package oxidemetricsreceiver
 
 import (
 	"testing"

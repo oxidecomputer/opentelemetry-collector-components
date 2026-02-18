@@ -1,4 +1,4 @@
-module github.com/oxidecomputer/oxidereceiver
+module github.com/oxidecomputer/opentelemetry-collector-components
 
 go 1.25.0
 
