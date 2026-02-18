@@ -40,7 +40,8 @@ receivers:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.145.0
 
   # Add the Oxide receiver.
-  - gomod: github.com/oxidecomputer/oxidereceiver v0.1.0
+  - gomod: github.com/oxidecomputer/opentelemetry-collector-components v0.1.0
+    import: github.com/oxidecomputer/opentelemetry-collector-components/receiver/oxidemetricsreceiver
 
 connectors:
   - gomod: go.opentelemetry.io/collector/connector/forwardconnector v0.145.0
@@ -53,4 +54,4 @@ providers:
   - gomod: go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.51.0
 
 replaces:
-  - github.com/oxidecomputer/oxidereceiver => ..
+  - github.com/oxidecomputer/opentelemetry-collector-components => ..

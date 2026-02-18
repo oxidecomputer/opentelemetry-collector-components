@@ -1,4 +1,4 @@
-package oxidereceiver
+package oxidemetricsreceiver
 
 import (
 	"context"
@@ -74,7 +74,9 @@ func (s *oxideScraper) Start(ctx context.Context, _ component.Host) error {
 
 	s.logger.Info("collecting metrics", zap.Any("metrics", metricNames))
 
-	meter := s.settings.MeterProvider.Meter("github.com/oxidecomputer/oxidereceiver")
+	meter := s.settings.MeterProvider.Meter(
+		"github.com/oxidecomputer/opentelemetry-collector-components/receiver/oxidemetricsreceiver",
+	)
 
 	s.apiRequestDuration, err = meter.Float64Gauge(
 		"oxide_receiver.api_request.duration",
