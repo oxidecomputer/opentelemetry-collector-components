@@ -12,6 +12,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
         - goos: linux
@@ -29,9 +30,8 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - run: make install-builder
-
-    - run: builder --config collector/manifest.yaml
+    - run: go tool builder --config collector/manifest.yaml --skip-compilation
+    - run: cd dist && go build -trimpath -o otelcol-oxide .
       env:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}

@@ -6,7 +6,7 @@ dist:
   module: github.com/oxidecomputer/otelcol-oxide
   name: otelcol-oxide
   description: OpenTelemetry Collector with Oxide receiver
-  version: 0.1.0
+  version: 0.2.0
   output_path: ./dist
   build_tags: "grpcnotrace"
 
@@ -40,7 +40,7 @@ receivers:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.145.0
 
   # Add the Oxide receiver.
-  - gomod: github.com/oxidecomputer/opentelemetry-collector-components v0.1.0
+  - gomod: github.com/oxidecomputer/opentelemetry-collector-components v0.2.0
     import: github.com/oxidecomputer/opentelemetry-collector-components/receiver/oxidemetricsreceiver
 
 connectors:
