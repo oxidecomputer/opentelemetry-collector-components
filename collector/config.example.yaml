@@ -1,6 +1,8 @@
 receivers:
   oxideauditlogs:
     collection_interval: 60s
+    initial_lookback: 24h
+    cursor_path: /var/lib/otelcol/audit_cursor.json
 
   oxide:
     # Note: uncomment to configure Oxide API authentication. By default, the

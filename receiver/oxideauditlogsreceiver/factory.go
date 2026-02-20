@@ -23,7 +23,8 @@ func NewFactory() receiver.Factory {
 
 func createDefaultConfig() component.Config {
 	cfg := &Config{
-		InitialLookback: 24 * time.Hour,
+		InitialLookback: time.Hour,
+		PageSize:        500,
 	}
 	cfg.CollectionInterval = 60 * time.Second
 	return cfg

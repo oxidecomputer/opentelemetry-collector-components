@@ -12,7 +12,9 @@ All configuration parameters are optional. If `host` and `token` are not provide
 |-----------|------|---------|-------------|
 | `host` | string | (from environment) | Oxide API host URL |
 | `token` | string | (from environment) | Authentication token for the Oxide API |
-| `initial_lookback` | duration | `24h` | How far back to query on the first scrape |
+| `initial_lookback` | duration | `1h` | How far back to query on the first scrape |
+| `cursor_path` | string | (none) | Optional file path for persisting the pagination cursor across restarts |
+| `page_size` | int | `500` | Number of audit log entries fetched per API request |
 | `insecure_skip_verify` | bool | `false` | Skip TLS certificate verification |
 | `collection_interval` | duration | `1m` | Interval between scrapes |
 
@@ -24,6 +26,10 @@ receivers:
     initial_lookback: 24h
     collection_interval: 60s
 ```
+
+### Cold Start Performance
+
+The initial scrape can be slow if `initial_lookback` is long and there are many audit log entries to fetch. To mitigate cold start times, use a shorter `initial_lookback`, or enable the persistent cursor using `cursor_path`.
 
 ### Internal Metrics
 

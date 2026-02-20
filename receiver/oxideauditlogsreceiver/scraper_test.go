@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -106,8 +108,8 @@ func TestCursor(t *testing.T) {
 
 	s := &auditLogScraper{
 		cursor: cursor{
-			timeCompleted: &t1,
-			id:            "id-0",
+			TimeCompleted: &t1,
+			ID:            "id-0",
 		},
 	}
 
@@ -149,14 +151,14 @@ func TestCursor(t *testing.T) {
 	logs := plog.NewLogs()
 	now := time.Now()
 	for _, entry := range entries {
-		if entry.Id == s.cursor.id {
+		if entry.Id == s.cursor.ID {
 			continue
 		}
 		require.NoError(t, addLogRecord(logs, entry, now))
 		if entry.TimeCompleted != nil {
 			s.cursor = cursor{
-				timeCompleted: entry.TimeCompleted,
-				id:            entry.Id,
+				TimeCompleted: entry.TimeCompleted,
+				ID:            entry.Id,
 			}
 		}
 	}
@@ -165,8 +167,22 @@ func TestCursor(t *testing.T) {
 	require.Equal(t, 2, logs.LogRecordCount())
 
 	// Cursor should point to the last entry.
-	require.Equal(t, "id-2", s.cursor.id)
-	require.Equal(t, t3, *s.cursor.timeCompleted)
+	require.Equal(t, "id-2", s.cursor.ID)
+	require.Equal(t, t3, *s.cursor.TimeCompleted)
+}
+
+func makeEntry(id string, tc *time.Time) oxide.AuditLogEntry {
+	return oxide.AuditLogEntry{
+		Id:            id,
+		TimeStarted:   tc,
+		TimeCompleted: tc,
+		Actor: oxide.AuditLogEntryActor{
+			Value: &oxide.AuditLogEntryActorUnauthenticated{},
+		},
+		Result: oxide.AuditLogEntryResult{
+			Value: &oxide.AuditLogEntryResultUnknown{},
+		},
+	}
 }
 
 // mockAuditLogClient returns pages in sequence, allowing injection of errors.
@@ -196,20 +212,6 @@ func TestScrapePartialResults(t *testing.T) {
 	t1 := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	t2 := time.Date(2025, 1, 1, 0, 0, 1, 0, time.UTC)
 
-	makeEntry := func(id string, tc *time.Time) oxide.AuditLogEntry {
-		return oxide.AuditLogEntry{
-			Id:            id,
-			TimeStarted:   tc,
-			TimeCompleted: tc,
-			Actor: oxide.AuditLogEntryActor{
-				Value: &oxide.AuditLogEntryActorUnauthenticated{},
-			},
-			Result: oxide.AuditLogEntryResult{
-				Value: &oxide.AuditLogEntryResultUnknown{},
-			},
-		}
-	}
-
 	client := &mockAuditLogClient{
 		pages: []mockPage{
 			{
@@ -230,7 +232,7 @@ func TestScrapePartialResults(t *testing.T) {
 		client,
 	)
 	require.NoError(t, s.Start(context.Background(), nil))
-	s.cursor = cursor{timeCompleted: &t2}
+	s.cursor = cursor{TimeCompleted: &t2}
 
 	logs, err := s.Scrape(context.Background())
 
@@ -242,6 +244,54 @@ func TestScrapePartialResults(t *testing.T) {
 	require.Equal(t, 1, logs.LogRecordCount())
 
 	// Cursor should point to the last successful entry.
-	require.Equal(t, "id-1", s.cursor.id)
-	require.Equal(t, t1, *s.cursor.timeCompleted)
+	require.Equal(t, "id-1", s.cursor.ID)
+	require.Equal(t, t1, *s.cursor.TimeCompleted)
+}
+
+func TestCursorPersistence(t *testing.T) {
+	t1 := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	t2 := time.Date(2025, 1, 1, 0, 0, 1, 0, time.UTC)
+
+	cursorPath := filepath.Join(t.TempDir(), "cursor.json")
+
+	client := &mockAuditLogClient{
+		pages: []mockPage{
+			{
+				result: &oxide.AuditLogEntryResultsPage{
+					Items: []oxide.AuditLogEntry{
+						makeEntry("id-1", &t1),
+						makeEntry("id-2", &t2),
+					},
+				},
+			},
+		},
+	}
+
+	cfg := &Config{
+		InitialLookback: time.Hour,
+		CursorPath:      cursorPath,
+	}
+
+	// First scraper: cursor file doesn't exist yet, should fall back to InitialLookback.
+	s := newAuditLogScraper(cfg, componenttest.NewNopTelemetrySettings(), client)
+	require.NoError(t, s.Start(context.Background(), nil))
+	require.Empty(t, s.cursor.ID)
+	require.WithinDuration(t, time.Now().Add(-time.Hour), *s.cursor.TimeCompleted, 5*time.Second)
+
+	_, err := s.Scrape(context.Background())
+	require.NoError(t, err)
+
+	// Verify cursor file exists and has correct content.
+	data, err := os.ReadFile(cursorPath)
+	require.NoError(t, err)
+	var saved cursor
+	require.NoError(t, json.Unmarshal(data, &saved))
+	require.Equal(t, "id-2", saved.ID)
+	require.Equal(t, t2, *saved.TimeCompleted)
+
+	// Second scraper: verify it loads cursor from file instead of using InitialLookback.
+	s2 := newAuditLogScraper(cfg, componenttest.NewNopTelemetrySettings(), client)
+	require.NoError(t, s2.Start(context.Background(), nil))
+	require.Equal(t, "id-2", s2.cursor.ID)
+	require.Equal(t, t2, *s2.cursor.TimeCompleted)
 }

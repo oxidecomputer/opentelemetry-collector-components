@@ -8,6 +8,7 @@ services:
     - OXIDE_TOKEN=${OXIDE_TOKEN}
     volumes:
     - ../collector/config.yaml:/etc/otelcol/config.yaml:ro
+    - otelcol_data:/var/lib/otelcol
     ports:
     - "9091:9091"
     - "8888:8888"
@@ -42,5 +43,6 @@ services:
     - loki
 
 volumes:
+  otelcol_data:
   prometheus_data:
   loki_data:
