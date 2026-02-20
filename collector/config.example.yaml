@@ -1,4 +1,9 @@
 receivers:
+  oxideauditlogs:
+    collection_interval: 60s
+    initial_lookback: 24h
+    cursor_path: /var/lib/otelcol/audit_cursor.json
+
   oxide:
     # Note: uncomment to configure Oxide API authentication. By default, the
     # collector uses the $OXIDE_{PROFILE,HOST,TOKEN} environment variables.
@@ -14,8 +19,17 @@ receivers:
 
 processors:
   batch:
+  # Keep log batches small to stay within Loki's request size limit.
+  batch/logs:
+    send_batch_size: 1000
+    send_batch_max_size: 1000
 
 exporters:
+  otlp_http/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+
   prometheus:
     endpoint: "0.0.0.0:9091"
     translation_strategy: UnderscoreEscapingWithSuffixes
@@ -38,3 +52,8 @@ service:
       receivers: [oxide]
       processors: [batch]
       exporters: [prometheus]
+
+    logs:
+      receivers: [oxideauditlogs]
+      processors: [batch/logs]
+      exporters: [otlp_http/loki]

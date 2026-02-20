@@ -8,12 +8,13 @@ services:
     - OXIDE_TOKEN=${OXIDE_TOKEN}
     volumes:
     - ../collector/config.yaml:/etc/otelcol/config.yaml:ro
+    - otelcol_data:/var/lib/otelcol
     ports:
     - "9091:9091"
     - "8888:8888"
 
   prometheus:
-    image: prom/prometheus:v3.8.0
+    image: prom/prometheus:latest
     volumes:
     - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     - prometheus_data:/prometheus
@@ -22,5 +23,26 @@ services:
     depends_on:
     - otelcol
 
+  loki:
+    image: grafana/loki:3
+    command: -config.file=/etc/loki/config.yaml
+    ports:
+    - "3100:3100"
+    volumes:
+    - ./loki.yaml:/etc/loki/config.yaml:ro
+    - loki_data:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+    - "3000:3000"
+    volumes:
+    - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    depends_on:
+    - prometheus
+    - loki
+
 volumes:
+  otelcol_data:
   prometheus_data:
+  loki_data:
