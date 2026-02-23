@@ -9,9 +9,10 @@ tool (
 
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest v0.139.0
-	github.com/oxidecomputer/oxide.go v0.8.0
+	github.com/oxidecomputer/oxide.go v0.8.1-0.20260219202204-dfdb24eebe46
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/collector/component v1.45.0
+	go.opentelemetry.io/collector/component/componenttest v0.139.0
 	go.opentelemetry.io/collector/consumer v1.45.0
 	go.opentelemetry.io/collector/pdata v1.45.0
 	go.opentelemetry.io/collector/receiver v1.45.0
@@ -85,6 +86,8 @@ require (
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/ghostiam/protogetter v0.3.18 // indirect
 	github.com/go-critic/go-critic v0.14.3 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-toolsmith/astcast v1.1.0 // indirect
 	github.com/go-toolsmith/astcopy v1.1.0 // indirect
 	github.com/go-toolsmith/astequal v1.2.0 // indirect
@@ -110,6 +113,7 @@ require (
 	github.com/golangci/swaggoswag v0.0.0-20250504205917-77f2aca3143e // indirect
 	github.com/golangci/unconvert v0.0.0-20250410112200-a129a6e6413e // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gordonklaus/ineffassign v0.2.0 // indirect
 	github.com/gostaticanalysis/analysisutil v0.7.1 // indirect
 	github.com/gostaticanalysis/comment v1.5.0 // indirect
@@ -226,12 +230,15 @@ require (
 	go-simpler.org/sloglint v0.11.1 // indirect
 	go.augendre.info/arangolint v0.3.1 // indirect
 	go.augendre.info/fatcontext v0.9.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/collector/cmd/builder v0.145.0 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror v0.139.0 // indirect
 	go.opentelemetry.io/collector/featuregate v1.45.0 // indirect
 	go.opentelemetry.io/collector/pdata/pprofile v0.139.0 // indirect
 	go.opentelemetry.io/collector/pipeline v1.45.0 // indirect
 	go.opentelemetry.io/collector/receiver/receiverhelper v0.139.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.38.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
