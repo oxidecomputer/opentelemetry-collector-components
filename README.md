@@ -31,6 +31,26 @@ Create a `collector/config.yaml` file with your collector configuration, or copy
 
 If using the default configuration, you can check metrics at `http://localhost:9091`. The collector will push audit logs to a local Loki instance, if available.
 
+<details>
+<summary>Verifying the Collector</summary>
+
+The metrics receiver and audit logs receiver each collect data every 60 seconds by default (configurable via `collection_interval`). After waiting at least 60 seconds, verify that the Prometheus metrics endpoint is serving data:
+
+```bash
+curl -s http://localhost:9091/metrics
+```
+
+You should see Prometheus-formatted metrics like:
+
+```
+hardware_component:temperature{chassis_serial="BRM42220013",sensor="CPU",slot="14",...} 61.875
+virtual_machine:check_total{instance_id="11d1e793-...",state="running",...} 19745
+silo_utilization_cpu{silo_name="demo-1839bc12c06bd448",type="allocated",...} 32
+virtual_disk:bytes_written_total{instance_id="11d1e793-...",...} 1.048576e+06
+```
+
+</details>
+
 ### Running the Collector with Docker Compose
 
 We provide an example Dockerfile and Docker Compose manifest to run the Collector, along with a Prometheus instance to persist metrics. Note: the Docker Compose manifest doesn't mount your Oxide configuration file, so you can't authenticate using Oxide profiles. Instead, either set the `OXIDE_HOST` and `OXIDE_TOKEN` environment variables, or add authentication details to your OpenTelemetry configuration file.
@@ -45,6 +65,77 @@ Once the example is running:
 - Grafana: http://localhost:3000
 - Loki: http://localhost:3100
 - Collector internal metrics: http://localhost:8888/metrics
+
+<details>
+<summary>Verifying Docker Compose</summary>
+
+After waiting at least 60 seconds for the first collection cycle:
+
+**Prometheus**: query for metrics, e.g. virtual machine vCPU usage:
+
+```bash
+curl -s 'http://localhost:9090/api/v1/query' \
+  --data-urlencode 'query={__name__="virtual_machine:vcpu_usage_total"}' \
+  | jq .
+```
+
+```json
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "virtual_machine:vcpu_usage_total",
+          "instance_id": "11d1e793-6e66-4601-9754-a91e53f497f6",
+          "state": "emulation",
+          "vcpu_id": "0",
+          ...
+        },
+        "value": [1740326494.082, "1370589028518"]
+      },
+      ...
+    ]
+  }
+}
+```
+
+**Loki**: verify that audit logs are being ingested. Note: logs won't appear in Loki until the collector finishes its first full fetch of the audit log history, which may take several minutes if there are many entries in the lookback window.
+
+```bash
+NOW=$(date +%s); START=$((NOW - 86400))
+curl -s -G http://localhost:3100/loki/api/v1/query_range \
+  --data-urlencode 'query={service_name="oxide"}' \
+  --data-urlencode 'limit=1' \
+  --data-urlencode "start=$START" \
+  --data-urlencode "end=$NOW" \
+  | jq .
+```
+
+Each log entry contains the full audit log JSON. The values are `[timestamp, body]` pairs:
+
+```json
+{
+  "status": "success",
+  "data": {
+    "resultType": "streams",
+    "result": [
+      {
+        "stream": { "service_name": "oxide" },
+        "values": [
+          [
+            "1740095568720139000",
+            "{\"actor\":{\"kind\":\"unauthenticated\"},\"id\":\"c67a42df-3061-4dad-b2be-a3d57a6b99c7\",\"operation_id\":\"login_saml\",\"request_id\":\"3b53fe77-c1f0-4e96-865c-6ef7ccced0c0\",\"request_uri\":\"/login/demo-570ce8b7786fd50d/saml/keycloak\",\"result\":{\"http_status_code\":303,\"kind\":\"success\"},\"source_ip\":\"172.21.252.9\",\"time_completed\":\"2026-02-20T23:42:48.945813Z\",\"time_started\":\"2026-02-20T23:42:48.720139Z\"}"
+          ]
+        ]
+      }
+    ]
+  }
+}
+```
+
+</details>
 
 ## Development
 
