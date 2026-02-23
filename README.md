@@ -104,12 +104,8 @@ curl -s 'http://localhost:9090/api/v1/query' \
 **Loki**: verify that audit logs are being ingested. Note: logs won't appear in Loki until the collector finishes its first full fetch of the audit log history, which may take several minutes if there are many entries in the lookback window.
 
 ```bash
-NOW=$(date +%s); START=$((NOW - 86400))
 curl -s -G http://localhost:3100/loki/api/v1/query_range \
   --data-urlencode 'query={service_name="oxide"}' \
-  --data-urlencode 'limit=1' \
-  --data-urlencode "start=$START" \
-  --data-urlencode "end=$NOW" \
   | jq .
 ```
 
