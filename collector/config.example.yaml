@@ -1,7 +1,7 @@
 receivers:
   oxideauditlogs:
     collection_interval: 60s
-    initial_lookback: 24h
+    initial_lookback: 1h
     cursor_path: /var/lib/otelcol/audit_cursor.json
 
   oxide:
