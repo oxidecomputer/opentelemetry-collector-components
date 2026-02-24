@@ -143,14 +143,16 @@ make test
 
 ## Releasing
 
-To create a new release, first bump the versions in `collector/manifest.yaml`:
+To create a new release:
 
-- `dist.version` — the collector distribution version
-- The receiver gomod version (`github.com/oxidecomputer/opentelemetry-collector-components`)
-
-Then push a git tag matching `v*` (e.g. `v0.2.0`). This creates a new GitHub release, and publishes updated collector binaries and the Docker image.
+1. Bump the versions in `collector/manifest.yaml` and push to `main`:
+   - `dist.version`: the collector distribution version
+   - The receiver go.mod version (`github.com/oxidecomputer/opentelemetry-collector-components`)
+1. Tag the commit and push the tag. The tag must point to a commit on `main`, or the release workflow will fail.
 
 ```bash
 git tag v0.2.0
 git push origin v0.2.0
 ```
+
+This creates a new GitHub release, and publishes updated collector binaries and the Docker image.
