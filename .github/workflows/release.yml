@@ -48,6 +48,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
     - uses: actions/download-artifact@v4
       with:
         path: dist
@@ -56,12 +60,23 @@ jobs:
     - working-directory: dist
       run: sha256sum otelcol-oxide-* > checksums.txt
 
-    - uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          dist/otelcol-oxide-*
-          dist/checksums.txt
-        generate_release_notes: true
+    - name: Create or update release
+      run: |
+        PREV=$(git tag -l 'v*' --sort=-version:refname | sed -n '2p')
+        NOTES_ARGS="--generate-notes"
+        if [ -n "$PREV" ]; then
+          NOTES_ARGS="$NOTES_ARGS --notes-start-tag $PREV"
+        fi
+        if gh release view ${{ github.ref_name }} > /dev/null 2>&1; then
+          gh release upload ${{ github.ref_name }} \
+            dist/otelcol-oxide-* dist/checksums.txt --clobber
+        else
+          gh release create ${{ github.ref_name }} \
+            $NOTES_ARGS \
+            dist/otelcol-oxide-* dist/checksums.txt
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     needs: build
