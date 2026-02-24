@@ -4,7 +4,7 @@ test:
 	go test -v ./...
 
 build-collector:
-	go tool builder --config collector/manifest.yaml
+	CGO_ENABLED=0 go tool builder --config collector/manifest.yaml
 
 clean:
 	@echo "Cleaning build artifacts..."
