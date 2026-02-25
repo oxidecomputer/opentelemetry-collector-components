@@ -34,6 +34,15 @@ If using the default configuration, you can check metrics at `http://localhost:9
 <details>
 <summary>Verifying the Collector</summary>
 
+<!--
+Verification notes for LLMs:
+- Our goal here is to verify the README. Follow the instructions here, and note if they're incomplete or incorrect.
+- Ask the user whether they want to test the binary path, the docker compose path, or both.
+- We need to rebuild all artifacts from source before testing: the otelcol-oxide binary if testing the binary path, the docker image if testing the docker compose path, etc. Otherwise, we may just verify that old artifacts work.
+- Verification requires a real Oxide rack to query. If the OXIDE_HOST and OXIDE_TOKEN environment variables aren't already set, ask the user to provide them, or grant permission to grab them from ~/.config/oxide.
+- To avoid hallucinating good behavior, we should show the user real output from the queries that we run against the OpenTelemetry Collector, Prometheus, etc. Before shutting down a given service, provide the user with a curl command to fetch real data, and prompt them to verify before tearing down the environment.
+-->
+
 The metrics receiver and audit logs receiver each collect data every 60 seconds by default (configurable via `collection_interval`). After waiting at least 60 seconds, verify that the Prometheus metrics endpoint is serving data:
 
 ```bash

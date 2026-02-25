@@ -3,6 +3,11 @@ services:
     build:
       context: ..
       dockerfile: collector/Dockerfile
+    command:
+    - --config
+    - /etc/otelcol/config.yaml
+    # Add component/pipeline/etc ids to internal metrics.
+    - --feature-gates=telemetry.newPipelineTelemetry
     environment:
     - OXIDE_HOST=${OXIDE_HOST}
     - OXIDE_TOKEN=${OXIDE_TOKEN}
