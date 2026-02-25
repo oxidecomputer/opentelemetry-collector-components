@@ -33,6 +33,7 @@ jobs:
     - run: go tool builder --config collector/manifest.yaml --skip-compilation
     - run: cd dist && go build -trimpath -o otelcol-oxide .
       env:
+        CGO_ENABLED: "0"
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
 
