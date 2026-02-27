@@ -370,11 +370,10 @@ func TestAddHistogram(t *testing.T) {
 	table := oxide.OxqlTable{Name: "test_metric"}
 
 	for _, tc := range []struct {
-		name          string
-		series        oxide.Timeseries
-		wantMetrics   []pmetric.HistogramDataPoint
-		wantQuantiles []pmetric.NumberDataPoint
-		wantErr       string
+		name        string
+		series      oxide.Timeseries
+		wantMetrics []pmetric.HistogramDataPoint
+		wantErr     string
 	}{
 		{
 			name: "int: success",
@@ -409,29 +408,6 @@ func TestAddHistogram(t *testing.T) {
 					dp.SetCount(6) // 1+2+3
 					dp.ExplicitBounds().FromRaw([]float64{0, 1, 2})
 					dp.BucketCounts().FromRaw([]uint64{1, 2, 3})
-					return dp
-				}(),
-			},
-			wantQuantiles: []pmetric.NumberDataPoint{
-				func() pmetric.NumberDataPoint {
-					dp := pmetric.NewNumberDataPoint()
-					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
-					dp.SetDoubleValue(1.5)
-					dp.Attributes().PutDouble("quantile", 0.5)
-					return dp
-				}(),
-				func() pmetric.NumberDataPoint {
-					dp := pmetric.NewNumberDataPoint()
-					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
-					dp.SetDoubleValue(1.9)
-					dp.Attributes().PutDouble("quantile", 0.9)
-					return dp
-				}(),
-				func() pmetric.NumberDataPoint {
-					dp := pmetric.NewNumberDataPoint()
-					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
-					dp.SetDoubleValue(1.99)
-					dp.Attributes().PutDouble("quantile", 0.99)
 					return dp
 				}(),
 			},
@@ -472,29 +448,6 @@ func TestAddHistogram(t *testing.T) {
 					return dp
 				}(),
 			},
-			wantQuantiles: []pmetric.NumberDataPoint{
-				func() pmetric.NumberDataPoint {
-					dp := pmetric.NewNumberDataPoint()
-					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
-					dp.SetDoubleValue(1.5)
-					dp.Attributes().PutDouble("quantile", 0.5)
-					return dp
-				}(),
-				func() pmetric.NumberDataPoint {
-					dp := pmetric.NewNumberDataPoint()
-					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
-					dp.SetDoubleValue(1.9)
-					dp.Attributes().PutDouble("quantile", 0.9)
-					return dp
-				}(),
-				func() pmetric.NumberDataPoint {
-					dp := pmetric.NewNumberDataPoint()
-					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
-					dp.SetDoubleValue(1.99)
-					dp.Attributes().PutDouble("quantile", 0.99)
-					return dp
-				}(),
-			},
 		},
 		{
 			name: "unexpected type",
@@ -516,9 +469,8 @@ func TestAddHistogram(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			histogramDataPoints := pmetric.NewHistogramDataPointSlice()
-			quantileGauge := pmetric.NewGauge()
 
-			err := addHistogram(histogramDataPoints, quantileGauge, table, tc.series)
+			err := addHistogram(histogramDataPoints, table, tc.series)
 
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
@@ -527,7 +479,6 @@ func TestAddHistogram(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, len(tc.wantMetrics), histogramDataPoints.Len())
-			require.Equal(t, len(tc.wantQuantiles), quantileGauge.DataPoints().Len())
 
 			for idx, wantMetric := range tc.wantMetrics {
 				err := pmetrictest.CompareHistogramDataPoints(
@@ -535,14 +486,6 @@ func TestAddHistogram(t *testing.T) {
 					histogramDataPoints.At(idx),
 				)
 				require.NoError(t, err, "mismatch at index %d", idx)
-			}
-
-			for idx, wantQuantile := range tc.wantQuantiles {
-				err := pmetrictest.CompareNumberDataPoint(
-					wantQuantile,
-					quantileGauge.DataPoints().At(idx),
-				)
-				require.NoError(t, err, "mismatch at quantile index %d", idx)
 			}
 		})
 	}

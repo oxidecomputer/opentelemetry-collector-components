@@ -242,11 +242,9 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 
 					quantiles := sm.Metrics().AppendEmpty()
 					quantiles.SetName(fmt.Sprintf("%s:quantiles", table.Name))
-					quantileGauge := quantiles.SetEmptyGauge()
 
 					if err := addHistogram(
 						measure.DataPoints(),
-						quantileGauge,
 						table,
 						series,
 					); err != nil {
@@ -426,7 +424,6 @@ func enrichLabels(resource pcommon.Resource, silos map[string]string, projects m
 
 func addHistogram(
 	dataPoints pmetric.HistogramDataPointSlice,
-	quantileGauge pmetric.Gauge,
 	table oxide.OxqlTable,
 	series oxide.Timeseries,
 ) error {
@@ -463,14 +460,6 @@ func addHistogram(
 				}
 				dp.SetCount(uint64(total))
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-
-				addQuantiles(
-					quantileGauge,
-					distValue.P50,
-					distValue.P90,
-					distValue.P99,
-					dp.Timestamp(),
-				)
 			}
 		case *oxide.ValueArrayDoubleDistribution:
 			if len(timestamps) != len(v.Values) {
@@ -491,14 +480,6 @@ func addHistogram(
 				}
 				dp.SetCount(uint64(total))
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-
-				addQuantiles(
-					quantileGauge,
-					distValue.P50,
-					distValue.P90,
-					distValue.P99,
-					dp.Timestamp(),
-				)
 			}
 		default:
 			return fmt.Errorf(
@@ -574,23 +555,4 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) 
 		}
 	}
 	return nil
-}
-
-// addQuantiles emits metrics for P50, P90, P99 quantile values. In addition
-// to histogram buckets and counts, OxQL exposes a set of predefined quantile
-// estimates using the P² algorithm, which we extract here.
-func addQuantiles(g pmetric.Gauge, p50, p90, p99 float64, timestamp pcommon.Timestamp) {
-	for _, q := range []struct {
-		p     float64
-		value float64
-	}{
-		{0.50, p50},
-		{0.90, p90},
-		{0.99, p99},
-	} {
-		p := g.DataPoints().AppendEmpty()
-		p.SetTimestamp(timestamp)
-		p.SetDoubleValue(q.value)
-		p.Attributes().PutDouble("quantile", q.p)
-	}
 }
