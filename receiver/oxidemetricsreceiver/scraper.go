@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/scraper/scrapererror"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
@@ -28,7 +29,6 @@ type oxideScraper struct {
 	apiRequestDuration metric.Float64Gauge
 	scrapeCount        metric.Int64Counter
 	scrapeDuration     metric.Float64Gauge
-	metricParseErrors  metric.Int64Counter
 }
 
 func newOxideScraper(
@@ -105,15 +105,6 @@ func (s *oxideScraper) Start(ctx context.Context, _ component.Host) error {
 		return fmt.Errorf("failed to create scrapeDuration gauge: %w", err)
 	}
 
-	s.metricParseErrors, err = meter.Int64Counter(
-		"oxide_receiver.metric.parse_errors",
-		metric.WithDescription("Number of errors encountered while parsing individual metrics"),
-		metric.WithUnit("{error}"),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create metricParseErrors counter: %w", err)
-	}
-
 	return nil
 }
 
@@ -127,10 +118,14 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 	var group errgroup.Group
 	group.SetLimit(s.cfg.ScrapeConcurrency)
 
-	startTime := time.Now()
-	results := make([]*oxide.OxqlQueryResult, len(s.metricNames))
+	type queryResult struct {
+		response *oxide.OxqlQueryResult
+		latency  time.Duration
+		err      error
+	}
+	results := make([]queryResult, len(s.metricNames))
 
-	latencies := make([]time.Duration, len(s.metricNames))
+	startTime := time.Now()
 
 	for idx, metricName := range s.metricNames {
 		query := fmt.Sprintf(
@@ -139,14 +134,18 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 			s.cfg.QueryLookback,
 		)
 		group.Go(func() error {
-			goroStartTime := time.Now()
+			queryStartTime := time.Now()
 			result, err := s.client.SystemTimeseriesQuery(ctx, oxide.SystemTimeseriesQueryParams{
 				Body: &oxide.TimeseriesQuery{
 					Query: query,
 				},
 			})
-			elapsed := time.Since(goroStartTime)
-			latencies[idx] = elapsed
+			elapsed := time.Since(queryStartTime)
+			results[idx] = queryResult{
+				response: result,
+				latency:  elapsed,
+				err:      err,
+			}
 			s.logger.Info(
 				"scrape query finished",
 				zap.String("metric", metricName),
@@ -154,21 +153,39 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 				zap.Float64("latency", elapsed.Seconds()),
 			)
 			if err != nil {
-				return err
+				s.logger.Warn(
+					"failed to query metric",
+					zap.String("metric", metricName),
+					zap.Error(err),
+				)
+			} else {
+				s.apiRequestDuration.Record(
+					ctx,
+					elapsed.Seconds(),
+					metric.WithAttributes(attribute.String("request_name", metricName)),
+				)
 			}
-			results[idx] = result
+
 			return nil
 		})
 	}
-	if err := group.Wait(); err != nil {
-		s.scrapeCount.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "failure")))
-		return metrics, err
-	}
+	// We don't check the return value of Wait(). Instead, we accumulate error counts in the
+	// goroutine, and return a PartialScrapeError below if we observe >0 errors. Errors will be
+	// surfaced to users via the `scraper_errored_metric_points_total` metric, and collector logs
+	// contain the full details of failed scrapes.
+	_ = group.Wait()
 	elapsed := time.Since(startTime)
 	s.logger.Info("scrape finished", zap.Float64("latency", elapsed.Seconds()))
 
 	s.scrapeDuration.Record(ctx, elapsed.Seconds())
-	s.scrapeCount.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "success")))
+	s.scrapeCount.Add(ctx, 1)
+
+	var queryErrors int
+	for _, result := range results {
+		if result.err != nil {
+			queryErrors++
+		}
+	}
 
 	// Cache mappings from resource UUIDs to human-readable names. Note: we can also add mappings
 	// for higher-cardinality resources like instances and disks, but this would add more latency to
@@ -198,8 +215,12 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 		}
 	}
 
+	var parseErrors int
 	for _, result := range results {
-		for _, table := range result.Tables {
+		if result.err != nil {
+			continue
+		}
+		for _, table := range result.response.Tables {
 			for _, series := range table.Timeseries {
 				rm := metrics.ResourceMetrics().AppendEmpty()
 				resource := rm.Resource()
@@ -253,9 +274,7 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 							zap.String("metric", table.Name),
 							zap.Error(err),
 						)
-						s.metricParseErrors.Add(ctx, 1, metric.WithAttributes(
-							attribute.String("metric_name", table.Name),
-						))
+						parseErrors++
 					}
 				// Handle scalar gauge.
 				case v0.MetricType == oxide.MetricTypeGauge:
@@ -266,9 +285,7 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 							zap.String("metric", table.Name),
 							zap.Error(err),
 						)
-						s.metricParseErrors.Add(ctx, 1, metric.WithAttributes(
-							attribute.String("metric_name", table.Name),
-						))
+						parseErrors++
 					}
 
 				// Handle scalar counter.
@@ -287,22 +304,12 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 							zap.String("metric", table.Name),
 							zap.Error(err),
 						)
-						s.metricParseErrors.Add(ctx, 1, metric.WithAttributes(
-							attribute.String("metric_name", table.Name),
-						))
+						parseErrors++
 					}
 				}
 
 			}
 		}
-	}
-
-	for idx, metricName := range s.metricNames {
-		s.apiRequestDuration.Record(
-			ctx,
-			latencies[idx].Seconds(),
-			metric.WithAttributes(attribute.String("request_name", metricName)),
-		)
 	}
 
 	if s.cfg.AddUtilizationMetrics {
@@ -311,6 +318,13 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 		}
 	}
 
+	// Propagate partial errors to the collector machinery.
+	if queryErrors > 0 || parseErrors > 0 {
+		return metrics, scrapererror.NewPartialScrapeError(
+			fmt.Errorf("%d query errors, %d parse errors", queryErrors, parseErrors),
+			queryErrors+parseErrors,
+		)
+	}
 	return metrics, nil
 }
 
