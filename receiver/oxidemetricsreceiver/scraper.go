@@ -467,12 +467,12 @@ func addHistogram(
 				dp.ExplicitBounds().FromRaw(bins)
 
 				counts := dp.BucketCounts()
-				total := 0
+				var total uint64
 				for _, count := range distValue.Counts {
-					counts.Append(uint64(count))
+					counts.Append(count)
 					total += count
 				}
-				dp.SetCount(uint64(total))
+				dp.SetCount(total)
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
 			}
 		case *oxide.ValueArrayDoubleDistribution:
@@ -487,12 +487,12 @@ func addHistogram(
 				dp.ExplicitBounds().FromRaw(distValue.Bins)
 
 				counts := dp.BucketCounts()
-				total := 0
+				var total uint64
 				for _, count := range distValue.Counts {
-					counts.Append(uint64(count))
+					counts.Append(count)
 					total += count
 				}
-				dp.SetCount(uint64(total))
+				dp.SetCount(total)
 				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
 			}
 		default:
