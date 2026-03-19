@@ -67,21 +67,13 @@ func TestAddLogRecord(t *testing.T) {
 	}
 
 	logs := plog.NewLogs()
+	scope := logs.ResourceLogs().AppendEmpty().ScopeLogs().AppendEmpty()
 	observedTime := now.Add(time.Minute)
-	require.NoError(t, addLogRecord(logs, entry, observedTime))
-
-	require.Equal(t, 1, logs.ResourceLogs().Len())
-	resource := logs.ResourceLogs().At(0)
-
-	// Check resource attributes.
-	serviceName, ok := resource.Resource().Attributes().Get("service.name")
-	require.True(t, ok)
-	require.Equal(t, "oxide", serviceName.Str())
+	require.NoError(t, addLogRecord(scope, entry, observedTime))
 
 	// Check log record.
-	require.Equal(t, 1, resource.ScopeLogs().Len())
-	require.Equal(t, 1, resource.ScopeLogs().At(0).LogRecords().Len())
-	log := resource.ScopeLogs().At(0).LogRecords().At(0)
+	require.Equal(t, 1, scope.LogRecords().Len())
+	log := scope.LogRecords().At(0)
 
 	require.Equal(t,
 		pcommon.NewTimestampFromTime(startTime),
@@ -149,12 +141,13 @@ func TestCursor(t *testing.T) {
 	}
 
 	logs := plog.NewLogs()
+	scope := logs.ResourceLogs().AppendEmpty().ScopeLogs().AppendEmpty()
 	now := time.Now()
 	for _, entry := range entries {
 		if entry.Id == s.cursor.ID {
 			continue
 		}
-		require.NoError(t, addLogRecord(logs, entry, now))
+		require.NoError(t, addLogRecord(scope, entry, now))
 		if entry.TimeCompleted != nil {
 			s.cursor = cursor{
 				TimeCompleted: entry.TimeCompleted,
@@ -187,6 +180,7 @@ func makeEntry(id string, tc *time.Time) oxide.AuditLogEntry {
 
 // mockAuditLogClient returns pages in sequence, allowing injection of errors.
 type mockAuditLogClient struct {
+	host  string
 	pages []mockPage
 	calls int
 }
@@ -208,11 +202,52 @@ func (m *mockAuditLogClient) AuditLogList(
 	return page.result, page.err
 }
 
+func (m *mockAuditLogClient) Host() string {
+	return m.host
+}
+
+func TestScrape(t *testing.T) {
+	t1 := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	client := &mockAuditLogClient{
+		host: "https://example.oxide.computer",
+		pages: []mockPage{
+			{
+				result: &oxide.AuditLogEntryResultsPage{
+					Items: []oxide.AuditLogEntry{makeEntry("id-1", &t1)},
+				},
+			},
+		},
+	}
+
+	s := newAuditLogScraper(
+		&Config{InitialLookback: time.Hour},
+		componenttest.NewNopTelemetrySettings(),
+		client,
+	)
+	require.NoError(t, s.Start(context.Background(), nil))
+
+	logs, err := s.Scrape(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, logs.ResourceLogs().Len())
+
+	attrs := logs.ResourceLogs().At(0).Resource().Attributes()
+
+	serviceName, ok := attrs.Get("service.name")
+	require.True(t, ok)
+	require.Equal(t, "oxide", serviceName.Str())
+
+	host, ok := attrs.Get("oxide.host")
+	require.True(t, ok)
+	require.Equal(t, "example.oxide.computer", host.Str())
+}
+
 func TestScrapePartialResults(t *testing.T) {
 	t1 := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	t2 := time.Date(2025, 1, 1, 0, 0, 1, 0, time.UTC)
 
 	client := &mockAuditLogClient{
+		host: "https://example.oxide.computer",
 		pages: []mockPage{
 			{
 				result: &oxide.AuditLogEntryResultsPage{
@@ -255,6 +290,7 @@ func TestCursorPersistence(t *testing.T) {
 	cursorPath := filepath.Join(t.TempDir(), "cursor.json")
 
 	client := &mockAuditLogClient{
+		host: "https://example.oxide.computer",
 		pages: []mockPage{
 			{
 				result: &oxide.AuditLogEntryResultsPage{

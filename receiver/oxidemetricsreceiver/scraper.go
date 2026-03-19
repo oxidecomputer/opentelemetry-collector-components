@@ -3,6 +3,7 @@ package oxidemetricsreceiver
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"regexp"
 	"slices"
 	"time"
@@ -224,6 +225,12 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 			for _, series := range table.Timeseries {
 				rm := metrics.ResourceMetrics().AppendEmpty()
 				resource := rm.Resource()
+				resource.Attributes().PutStr("service.name", "oxide")
+				host := s.client.Host()
+				if u, err := url.Parse(host); err == nil && u.Host != "" {
+					host = u.Host
+				}
+				resource.Attributes().PutStr("oxide.host", host)
 
 				addLabels(series, resource)
 
