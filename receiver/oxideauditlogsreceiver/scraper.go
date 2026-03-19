@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -36,6 +37,7 @@ type auditLogClient interface {
 	AuditLogList(ctx context.Context, params oxide.AuditLogListParams) (
 		*oxide.AuditLogEntryResultsPage, error,
 	)
+	Host() string
 }
 
 // scraperMetrics holds metrics about the log scraper.
@@ -122,6 +124,15 @@ func (s *auditLogScraper) Start(_ context.Context, _ component.Host) error {
 
 func (s *auditLogScraper) Scrape(ctx context.Context) (plog.Logs, error) {
 	logs := plog.NewLogs()
+	resource := logs.ResourceLogs().AppendEmpty()
+	attrs := resource.Resource().Attributes()
+	attrs.PutStr("service.name", "oxide")
+	host := s.client.Host()
+	if u, err := url.Parse(host); err == nil && u.Host != "" {
+		host = u.Host
+	}
+	attrs.PutStr("oxide.host", host)
+	scope := resource.ScopeLogs().AppendEmpty()
 	startTime := time.Now()
 
 	params := oxide.AuditLogListParams{
@@ -157,7 +168,7 @@ func (s *auditLogScraper) Scrape(ctx context.Context) (plog.Logs, error) {
 				continue
 			}
 
-			if err := addLogRecord(logs, entry, startTime); err != nil {
+			if err := addLogRecord(scope, entry, startTime); err != nil {
 				return logs, fmt.Errorf("adding log record: %w", err)
 			}
 
@@ -260,7 +271,7 @@ func (s *auditLogScraper) saveCursor() {
 	}
 }
 
-func addLogRecord(logs plog.Logs, entry oxide.AuditLogEntry, observedTime time.Time) error {
+func addLogRecord(scope plog.ScopeLogs, entry oxide.AuditLogEntry, observedTime time.Time) error {
 	raw, err := json.Marshal(entry)
 	if err != nil {
 		return fmt.Errorf("marshaling audit log entry %s: %w", entry.Id, err)
@@ -270,10 +281,6 @@ func addLogRecord(logs plog.Logs, entry oxide.AuditLogEntry, observedTime time.T
 		return fmt.Errorf("unmarshaling audit log entry %s: %w", entry.Id, err)
 	}
 
-	resource := logs.ResourceLogs().AppendEmpty()
-	resource.Resource().Attributes().PutStr("service.name", "oxide")
-
-	scope := resource.ScopeLogs().AppendEmpty()
 	log := scope.LogRecords().AppendEmpty()
 
 	if entry.TimeStarted != nil {
