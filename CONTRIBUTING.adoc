@@ -1,0 +1,33 @@
+= Contributing to Oxide OpenTelemetry Collector Components
+
+== Development
+
+=== Running Tests
+
+[source,bash]
+----
+make test
+----
+
+== Releasing
+
+To create a new release:
+
+1. Bump the versions in `collector/manifest.yaml` and push to `main`:
+* `dist.version`: the collector distribution version
+* The receiver go.mod version (`github.com/oxidecomputer/opentelemetry-collector-components`)
+2. Tag the commit and push the tag. The tag must point to a commit on `main`, or the release workflow will fail.
++
+[source,bash]
+----
+git tag vX.Y.Z
+git push origin vX.Y.Z
+----
+
+This triggers the link:.github/workflows/release.yml[release workflow], which:
+
+* Builds collector binaries for linux/amd64, linux/arm64, darwin/amd64, and darwin/arm64
+* Creates a GitHub release with the binaries and checksums
+* Publishes a multi-arch Docker image to `ghcr.io/oxidecomputer/opentelemetry-collector-components`
+
+To request a release, open an issue using the link:.github/ISSUE_TEMPLATE/release.yaml[release issue template].
