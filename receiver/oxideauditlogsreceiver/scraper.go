@@ -52,6 +52,7 @@ type auditLogScraper struct {
 	cfg      *Config
 	settings component.TelemetrySettings
 	logger   *zap.Logger
+	host     string
 	metrics  scraperMetrics
 	cursor   cursor
 }
@@ -65,6 +66,7 @@ func newAuditLogScraper(
 		client:   client,
 		cfg:      cfg,
 		settings: settings,
+		host:     normalizeHost(client.Host()),
 		logger:   settings.Logger,
 	}
 }
@@ -127,11 +129,7 @@ func (s *auditLogScraper) Scrape(ctx context.Context) (plog.Logs, error) {
 	resource := logs.ResourceLogs().AppendEmpty()
 	attrs := resource.Resource().Attributes()
 	attrs.PutStr("service.name", "oxide")
-	host := s.client.Host()
-	if u, err := url.Parse(host); err == nil && u.Host != "" {
-		host = u.Host
-	}
-	attrs.PutStr("oxide.host", host)
+	attrs.PutStr("oxide.host", s.host)
 	scope := resource.ScopeLogs().AppendEmpty()
 	startTime := time.Now()
 
@@ -147,13 +145,20 @@ func (s *auditLogScraper) Scrape(ctx context.Context) (plog.Logs, error) {
 		pageStart := time.Now()
 		page, err := s.client.AuditLogList(ctx, params)
 		pageLatency := time.Since(pageStart).Seconds()
-		s.metrics.apiRequestDuration.Record(ctx, pageLatency)
+		s.metrics.apiRequestDuration.Record(
+			ctx,
+			pageLatency,
+			metric.WithAttributes(attribute.String("oxide.host", s.host)),
+		)
 		if err != nil {
 			s.logger.Warn("audit log list request failed", zap.Error(err))
 			s.metrics.scrapeCount.Add(
 				ctx,
 				1,
-				metric.WithAttributes(attribute.String("status", "failure")),
+				metric.WithAttributes(
+					attribute.String("status", "failure"),
+					attribute.String("oxide.host", s.host),
+				),
 			)
 			// Emit partial results on error.
 			if logs.LogRecordCount() > 0 {
@@ -195,8 +200,19 @@ func (s *auditLogScraper) Scrape(ctx context.Context) (plog.Logs, error) {
 	}
 
 	elapsed := time.Since(startTime)
-	s.metrics.scrapeDuration.Record(ctx, elapsed.Seconds())
-	s.metrics.scrapeCount.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "success")))
+	s.metrics.scrapeDuration.Record(
+		ctx,
+		elapsed.Seconds(),
+		metric.WithAttributes(attribute.String("oxide.host", s.host)),
+	)
+	s.metrics.scrapeCount.Add(
+		ctx,
+		1,
+		metric.WithAttributes(
+			attribute.String("status", "success"),
+			attribute.String("oxide.host", s.host),
+		),
+	)
 
 	s.saveCursor()
 
@@ -269,6 +285,13 @@ func (s *auditLogScraper) saveCursor() {
 		s.logger.Warn("failed to rename cursor file", zap.Error(err))
 		return
 	}
+}
+
+func normalizeHost(raw string) string {
+	if u, err := url.Parse(raw); err == nil && u.Host != "" {
+		return u.Host
+	}
+	return raw
 }
 
 func addLogRecord(scope plog.ScopeLogs, entry oxide.AuditLogEntry, observedTime time.Time) error {

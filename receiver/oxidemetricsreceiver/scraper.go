@@ -24,12 +24,20 @@ type oxideScraper struct {
 	settings component.TelemetrySettings
 	cfg      *Config
 	logger   *zap.Logger
+	host     string
 
 	metricNames []string
 
 	apiRequestDuration metric.Float64Gauge
 	scrapeCount        metric.Int64Counter
 	scrapeDuration     metric.Float64Gauge
+}
+
+func normalizeHost(raw string) string {
+	if u, err := url.Parse(raw); err == nil && u.Host != "" {
+		return u.Host
+	}
+	return raw
 }
 
 func newOxideScraper(
@@ -42,6 +50,7 @@ func newOxideScraper(
 		settings: settings,
 		cfg:      cfg,
 		logger:   settings.Logger,
+		host:     normalizeHost(client.Host()),
 	}
 }
 
@@ -163,7 +172,10 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 				s.apiRequestDuration.Record(
 					ctx,
 					elapsed.Seconds(),
-					metric.WithAttributes(attribute.String("request_name", metricName)),
+					metric.WithAttributes(
+						attribute.String("request_name", metricName),
+						attribute.String("oxide.host", s.host),
+					),
 				)
 			}
 
@@ -178,8 +190,9 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 	elapsed := time.Since(startTime)
 	s.logger.Info("scrape finished", zap.Float64("latency", elapsed.Seconds()))
 
-	s.scrapeDuration.Record(ctx, elapsed.Seconds())
-	s.scrapeCount.Add(ctx, 1)
+	hostAttr := attribute.String("oxide.host", s.host)
+	s.scrapeDuration.Record(ctx, elapsed.Seconds(), metric.WithAttributes(hostAttr))
+	s.scrapeCount.Add(ctx, 1, metric.WithAttributes(hostAttr))
 
 	var queryErrors int
 	for _, result := range results {
@@ -226,11 +239,7 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 				rm := metrics.ResourceMetrics().AppendEmpty()
 				resource := rm.Resource()
 				resource.Attributes().PutStr("service.name", "oxide")
-				host := s.client.Host()
-				if u, err := url.Parse(host); err == nil && u.Host != "" {
-					host = u.Host
-				}
-				resource.Attributes().PutStr("oxide.host", host)
+				resource.Attributes().PutStr("oxide.host", s.host)
 
 				addLabels(series, resource)
 
@@ -344,7 +353,7 @@ func (s *oxideScraper) addSiloUtilization(ctx context.Context, metrics pmetric.M
 	if err != nil {
 		return err
 	}
-	addSiloUtilizationMetrics(metrics, resp, pcommon.NewTimestampFromTime(time.Now()))
+	addSiloUtilizationMetrics(metrics, resp, pcommon.NewTimestampFromTime(time.Now()), s.host)
 	return nil
 }
 
@@ -353,8 +362,11 @@ func addSiloUtilizationMetrics(
 	metrics pmetric.Metrics,
 	utilizations []oxide.SiloUtilization,
 	timestamp pcommon.Timestamp,
+	host string,
 ) {
 	rm := metrics.ResourceMetrics().AppendEmpty()
+	rm.Resource().Attributes().PutStr("service.name", "oxide")
+	rm.Resource().Attributes().PutStr("oxide.host", host)
 	sm := rm.ScopeMetrics().AppendEmpty()
 
 	addGauge := func(name string) pmetric.Gauge {
