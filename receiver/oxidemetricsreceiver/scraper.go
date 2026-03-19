@@ -265,10 +265,6 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 
 				switch {
 				// Handle histograms.
-				//
-				// Note: OxQL histograms include both buckets and counts, as well as a handful of
-				// preselected quantiles estimated using the P² algorithm. We extract the buckets
-				// and counts as an otel histogram, and the quantiles as a gauge.
 				case slices.Contains([]oxide.ValueArrayType{oxide.ValueArrayTypeIntegerDistribution, oxide.ValueArrayTypeDoubleDistribution}, v0.Values.Type()):
 					measure := m.SetEmptyHistogram()
 					// Always set aggregation temporality to cumulative. OxQL has both delta and
@@ -276,9 +272,6 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 					// 0th observation. Because we add "| last 1" to all OxQL queries, all counter
 					// metrics are effectively of type cumulative for our purposes.
 					measure.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
-
-					quantiles := sm.Metrics().AppendEmpty()
-					quantiles.SetName(fmt.Sprintf("%s:quantiles", table.Name))
 
 					if err := addHistogram(
 						measure.DataPoints(),
