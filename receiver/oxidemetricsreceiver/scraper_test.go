@@ -343,10 +343,13 @@ func TestAddSiloUtilizationMetrics(t *testing.T) {
 	}
 
 	metrics := pmetric.NewMetrics()
-	addSiloUtilizationMetrics(metrics, utilizations, timestamp)
+	addSiloUtilizationMetrics(metrics, utilizations, timestamp, "example.oxide.computer")
 
 	require.Equal(t, 1, metrics.ResourceMetrics().Len())
-	sm := metrics.ResourceMetrics().At(0).ScopeMetrics().At(0)
+	rm := metrics.ResourceMetrics().At(0)
+	require.Equal(t, "oxide", rm.Resource().Attributes().AsRaw()["service.name"])
+	require.Equal(t, "example.oxide.computer", rm.Resource().Attributes().AsRaw()["oxide.host"])
+	sm := rm.ScopeMetrics().At(0)
 	require.Equal(t, len(wantMetrics), sm.Metrics().Len())
 
 	for i := 0; i < sm.Metrics().Len(); i++ {
