@@ -1,0 +1,28 @@
+{
+  "name": "oxidereceiver",
+  "version": "1.0.0",
+  "description": "This repository provides OpenTelemetry Collector components for [Oxide](https://oxide.computer/).",
+  "main": "index.js",
+  "directories": {
+    "example": "example"
+  },
+  "scripts": {
+    "test:e2e": "npx playwright test --config example/e2e/playwright.config.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxidecomputer/opentelemetry-collector-components.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/oxidecomputer/opentelemetry-collector-components/issues"
+  },
+  "homepage": "https://github.com/oxidecomputer/opentelemetry-collector-components#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.5.0"
+  }
+}

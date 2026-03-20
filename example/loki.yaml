@@ -29,3 +29,12 @@ storage_config:
 
 limits_config:
   reject_old_samples: false
+  otlp_config:
+    resource_attributes:
+      attributes_config:
+      - action: index_label
+        attributes:
+        - oxide.host
+        - operation_id
+        - actor_kind
+        - actor_silo_user_id
