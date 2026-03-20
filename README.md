@@ -142,6 +142,50 @@ Each log entry contains the full audit log JSON. The values are `[timestamp, bod
 
 </details>
 
+## Example Dashboards
+
+The example stack includes pre-provisioned Grafana dashboards that visualize metrics and audit logs provided by the receivers in this repo. These dashboards are built around the configuration used by the Docker Compose example. To use them for a separate deployment, you'll need to configure OpenTelemetry, Grafana, and Loki to match the dashboards:
+
+- **Prometheus datasource**: set `timeInterval` to the scrape interval of your Prometheus target (60s for the example configuration).
+- **Loki index labels**: The audit logs dashboard uses variables backed by Loki stream labels (`operation_id`, `actor_kind`, `actor_silo_user_id`). These require the `transform/promote-attrs` processor in the collector config and the `otlp_config` section in the Loki config. See [collector/config.example.yaml](collector/config.example.yaml) and [example/loki.yaml](example/loki.yaml).
+- **Datasource UIDs**: The dashboards reference datasources by UID (`prometheus` and `loki`). The provisioned datasources must set matching UIDs.
+
+Alternatively, you can adjust the dashboards to match your configuration.
+
+### Installing dashboards in an existing Grafana instance
+
+Download the JSON files from [example/grafana/dashboards](example/grafana/dashboards/) and import them via the Grafana UI (**Dashboards > New > Import**) or the [Grafana API](https://grafana.com/docs/grafana/latest/developer-resources/api-reference/http-api/dashboard/).
+
+### Testing dashboards
+
+The dashboards include end-to-end tests that verify every panel renders data. The tests use Playwright to load each dashboard in a headless browser and check that all panels have non-blank content. These tests don't verify correctness, but will catch dashboards that are fully broken. Note that tests require running the monitoring stack against a real Oxide rack, and don't run on CI. If you update a dashboard or build a new release of the components after an upstream change, run the tests manually to verify that the dashboards are still working.
+
+To run the tests, start the example stack and wait ~3 minutes for data to accumulate:
+
+```bash
+# Start the stack
+cd example
+OXIDE_HOST=... OXIDE_TOKEN=... \
+  docker compose up --build -d
+
+# Wait for data (~3 minutes for rate() to have enough points)
+
+# Run the tests
+cd ..
+npm install
+npx playwright install chromium
+npm run test:e2e
+```
+
+To run against a different Grafana instance:
+
+```bash
+GRAFANA_URL=https://grafana.example.com \
+GRAFANA_USER=admin \
+GRAFANA_PASSWORD=secret \
+npm run test:e2e
+```
+
 ## Contributing
 
 See link:CONTRIBUTING.adoc[CONTRIBUTING.adoc] for development and release instructions.
