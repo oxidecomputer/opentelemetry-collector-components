@@ -65,8 +65,13 @@ for (const dashboard of dashboards) {
     });
 
     // Assert each panel has rendered content. For panels rendered
-    // with <canvas>, the canvas shouldn't be empty. For tables,
-    // there should be >0 rows.
+    // with <canvas>, the canvas shouldn't be empty. For other panel
+    // types, there should be >0 matching elements.
+    const nonCanvasSelectors = [
+      ".unwrapped-log-line", // logs
+      ".rdg-row:not(.rdg-header-row)", // table
+      "[data-testid='data-testid Bar gauge value']", // bar gauge
+    ];
     for (let i = 0; i < dashboard.panels.length; i++) {
       const panel = panelLocators.nth(i);
       const key = await panel.getAttribute("data-viz-panel-key");
@@ -100,12 +105,10 @@ for (const dashboard of dashboards) {
           });
         expect(isBlank, `panel ${key} canvas should not be blank`).toBe(false);
       } else {
-        const content = panel.locator(
-          ".unwrapped-log-line, .rdg-row:not(.rdg-header-row)",
-        );
+        const content = panel.locator(nonCanvasSelectors.join(", "));
         await expect(
           content.first(),
-          `panel ${key} should have log lines or table rows`,
+          `panel ${key} should have log lines, table rows, or gauge values`,
         ).toBeAttached({ timeout: 10_000 });
       }
     }
