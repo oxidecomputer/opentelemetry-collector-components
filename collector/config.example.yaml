@@ -10,9 +10,11 @@ receivers:
     # host: ${env:OXIDE_HOST}
     # token: ${env:OXIDE_TOKEN}
     metric_patterns:
-    - virtual_machine:.*
-    - virtual_disk:.*
     - hardware_component:.*
+    - http_service:.*
+    - instance_network_interface:.*
+    - virtual_disk:.*
+    - virtual_machine:.*
     add_labels: true
     add_utilization_metrics: true
     collection_interval: 60s
@@ -23,6 +25,16 @@ processors:
   batch/logs:
     send_batch_size: 1000
     send_batch_max_size: 1000
+
+  # Promote audit log fields to resource attributes so Loki can index them.
+  transform/promote-attrs:
+    log_statements:
+    - context: log
+      statements:
+      - set(resource.attributes["operation_id"], body["operation_id"])
+      - set(resource.attributes["actor_kind"], body["actor"]["kind"])
+      - set(resource.attributes["actor_silo_user_id"], body["actor"]["kind"]) where body["actor"]["silo_user_id"] == nil
+      - set(resource.attributes["actor_silo_user_id"], body["actor"]["silo_user_id"]) where body["actor"]["silo_user_id"] != nil
 
 exporters:
   otlp_http/loki:
@@ -55,5 +67,5 @@ service:
 
     logs:
       receivers: [oxideauditlogs]
-      processors: [batch/logs]
+      processors: [transform/promote-attrs, batch/logs]
       exporters: [otlp_http/loki]
