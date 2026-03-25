@@ -42,43 +42,11 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "mode": "continuous-GrYlRd"
           },
           "mappings": [],
+          "max": 1,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -104,17 +72,16 @@
       },
       "id": 2,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        "displayMode": "basic",
+        "namePlacement": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
+        "showUnfilled": false,
+        "valueMode": "color"
       },
       "pluginVersion": "12.2.1",
       "targets": [
@@ -125,13 +92,13 @@
           },
           "editorMode": "code",
           "expr": "sort_desc(sum by(silo_name) (silo_utilization_cpu{type=\"provisioned\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}) / sum by(silo_name) (silo_utilization_cpu{type=\"allocated\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}))",
-          "legendFormat": "__auto",
-          "range": true,
+          "legendFormat": "{{silo_name}}",
+          "instant": true,
           "refId": "A"
         }
       ],
       "title": "Quota utilization (provisioned / allocated)",
-      "type": "timeseries"
+      "type": "bargauge"
     },
     {
       "datasource": {
@@ -252,43 +219,11 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "mode": "continuous-GrYlRd"
           },
           "mappings": [],
+          "max": 1,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -314,17 +249,16 @@
       },
       "id": 7,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        "displayMode": "basic",
+        "namePlacement": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
+        "showUnfilled": false,
+        "valueMode": "color"
       },
       "pluginVersion": "12.2.1",
       "targets": [
@@ -335,13 +269,13 @@
           },
           "editorMode": "code",
           "expr": "sort_desc(sum by(silo_name) (silo_utilization_memory{type=\"provisioned\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}) / sum by(silo_name) (silo_utilization_memory{type=\"allocated\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}))",
-          "legendFormat": "__auto",
-          "range": true,
+          "legendFormat": "{{silo_name}}",
+          "instant": true,
           "refId": "A"
         }
       ],
       "title": "Quota utilization (provisioned / allocated)",
-      "type": "timeseries"
+      "type": "bargauge"
     },
     {
       "datasource": {
@@ -463,43 +397,11 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "mode": "continuous-GrYlRd"
           },
           "mappings": [],
+          "max": 1,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -525,17 +427,16 @@
       },
       "id": 4,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        "displayMode": "basic",
+        "namePlacement": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
+        "showUnfilled": false,
+        "valueMode": "color"
       },
       "pluginVersion": "12.2.1",
       "targets": [
@@ -546,13 +447,13 @@
           },
           "editorMode": "code",
           "expr": "sort_desc(sum by(silo_name) (silo_utilization_disk{type=\"provisioned\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}) / sum by(silo_name) (silo_utilization_disk{type=\"allocated\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}))",
-          "legendFormat": "__auto",
-          "range": true,
+          "legendFormat": "{{silo_name}}",
+          "instant": true,
           "refId": "A"
         }
       ],
       "title": "Quota utilization (provisioned / allocated)",
-      "type": "timeseries"
+      "type": "bargauge"
     },
     {
       "datasource": {
