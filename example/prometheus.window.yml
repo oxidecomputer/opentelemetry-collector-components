@@ -1,0 +1,13 @@
+global:
+  metric_name_escaping_scheme: underscores
+
+# Allow prometheus to accept out-of-order samples. If the collector restarts, we may push samples we already have, and we don't want this to fail the entire remote write batch.
+storage:
+  tsdb:
+    out_of_order_time_window: 1h
+
+scrape_configs:
+- job_name: otelcol-internal
+  static_configs:
+  - targets:
+    - otelcol:8888

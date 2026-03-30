@@ -24,9 +24,12 @@ func NewFactory() receiver.Factory {
 // createDefaultConfig creates the default configuration for the receiver.
 func createDefaultConfig() component.Config {
 	return &Config{
+		ControllerConfig:      scraperhelper.NewDefaultControllerConfig(),
 		MetricPatterns:        []string{".*"},
-		ScrapeConcurrency:     16,
-		QueryLookback:         "5m",
+		ScrapeConcurrency:     8,
+		QueryMode:             QueryModeLast,
+		QueryLookback:         5 * time.Minute,
+		QueryOffset:           5 * time.Second,
 		SchemaRefreshInterval: 5 * time.Minute,
 	}
 }
