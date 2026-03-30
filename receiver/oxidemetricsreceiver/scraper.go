@@ -26,7 +26,8 @@ type oxideScraper struct {
 	logger   *zap.Logger
 	host     string
 
-	metricNames []string
+	metricNames   []string
+	lastWindowEnd time.Time
 
 	apiRequestDuration metric.Float64Gauge
 	scrapeCount        metric.Int64Counter
@@ -122,6 +123,11 @@ func (s *oxideScraper) Shutdown(context.Context) error {
 	return nil
 }
 
+// oxqlTimestamp formats a time.Time as an OxQL absolute timestamp literal.
+func oxqlTimestamp(t time.Time) string {
+	return t.UTC().Format("2006-01-02T15:04:05.000000000")
+}
+
 func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 	metrics := pmetric.NewMetrics()
 
@@ -137,11 +143,45 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 
 	startTime := time.Now()
 
+	// Compute the query window. On first scrape, look back one collection
+	// interval from now. On subsequent scrapes, continue from where the
+	// last window ended.
+	collectionInterval := s.cfg.CollectionInterval
+	var queryOffset time.Duration
+	if s.cfg.QueryOffset != "" {
+		var err error
+		queryOffset, err = time.ParseDuration(s.cfg.QueryOffset)
+		if err != nil {
+			return metrics, fmt.Errorf("invalid query_offset %q: %w", s.cfg.QueryOffset, err)
+		}
+	}
+	maxWindowSize := 2 * collectionInterval
+	if s.cfg.MaxWindowSize != "" {
+		var err error
+		maxWindowSize, err = time.ParseDuration(s.cfg.MaxWindowSize)
+		if err != nil {
+			return metrics, fmt.Errorf("invalid max_window_size %q: %w", s.cfg.MaxWindowSize, err)
+		}
+	}
+	windowEnd := startTime.Add(-queryOffset)
+	if s.lastWindowEnd.IsZero() {
+		s.lastWindowEnd = windowEnd.Add(-collectionInterval)
+	} else if windowEnd.Sub(s.lastWindowEnd) > maxWindowSize {
+		s.logger.Warn(
+			"query window exceeds max_window_size, skipping ahead",
+			zap.Duration("window", windowEnd.Sub(s.lastWindowEnd)),
+			zap.Duration("max", maxWindowSize),
+		)
+		s.lastWindowEnd = windowEnd.Add(-collectionInterval)
+	}
+	windowStart := s.lastWindowEnd
+
 	for idx, metricName := range s.metricNames {
 		query := fmt.Sprintf(
-			"get %s | filter timestamp > @now() - %s | last 1",
+			"get %s | filter timestamp > @%s | filter timestamp <= @%s",
 			metricName,
-			s.cfg.QueryLookback,
+			oxqlTimestamp(windowStart),
+			oxqlTimestamp(windowEnd),
 		)
 		group.Go(func() error {
 			queryStartTime := time.Now()
@@ -182,6 +222,7 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 			return nil
 		})
 	}
+
 	// We don't check the return value of Wait(). Instead, we accumulate error counts in the
 	// goroutine, and return a PartialScrapeError below if we observe >0 errors. Errors will be
 	// surfaced to users via the `scraper_errored_metric_points_total` metric, and collector logs
@@ -229,54 +270,70 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 		}
 	}
 
+	rm := metrics.ResourceMetrics().AppendEmpty()
+	resource := rm.Resource()
+	resource.Attributes().PutStr("service.name", "oxide")
+	resource.Attributes().PutStr("oxide.host", s.host)
+	sm := rm.ScopeMetrics().AppendEmpty()
+
 	var parseErrors int
 	for _, result := range results {
 		if result.err != nil {
 			continue
 		}
+
 		for _, table := range result.response.Tables {
+			// Preprocess raw timeseries data, deduplicating values by truncated timestamp and
+			// converting mixed cumulative and delta series back to cumulative.
+			//
+			// TODO: Handle both steps upstream in oximeter.
+			var timeseries []oxide.Timeseries
 			for _, series := range table.Timeseries {
-				rm := metrics.ResourceMetrics().AppendEmpty()
-				resource := rm.Resource()
-				resource.Attributes().PutStr("service.name", "oxide")
-				resource.Attributes().PutStr("oxide.host", s.host)
-
-				addLabels(series, resource)
-
-				enrichLabels(resource, siloToName, projectToName)
-
-				var sm pmetric.ScopeMetrics
-				if rm.ScopeMetrics().Len() == 0 {
-					sm = rm.ScopeMetrics().AppendEmpty()
-				} else {
-					sm = rm.ScopeMetrics().At(0)
+				series = dedup(series)
+				series, err := toCumulative(series)
+				if err != nil {
+					s.logger.Warn(
+						"failed to convert series to cumulative",
+						zap.String("metric", table.Name),
+						zap.Error(err),
+					)
+					parseErrors++
+					continue
 				}
-
-				m := sm.Metrics().AppendEmpty()
-
-				m.SetName(table.Name)
-
-				// Hack: get metadata from the 0th point.
-				// TODO(jmcarp): Move this to the timeseries level in the api.
 				if len(series.Points.Values) == 0 {
 					continue
 				}
-				v0 := series.Points.Values[0]
+				timeseries = append(timeseries, series)
+			}
 
-				switch {
-				// Handle histograms.
-				case slices.Contains([]oxide.ValueArrayType{oxide.ValueArrayTypeIntegerDistribution, oxide.ValueArrayTypeDoubleDistribution}, v0.Values.Type()):
-					measure := m.SetEmptyHistogram()
-					// Always set aggregation temporality to cumulative. OxQL has both delta and
-					// cumulative counters, but both counter types use a cumulative value for their
-					// 0th observation. Because we add "| last 1" to all OxQL queries, all counter
-					// metrics are effectively of type cumulative for our purposes.
-					measure.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+			if len(timeseries) == 0 {
+				continue
+			}
 
+			m := sm.Metrics().AppendEmpty()
+			m.SetName(table.Name)
+
+			// Determine the metric type from the first series. By this point, we've already ensured
+			// that timeseries and timeseries[0].Points.Values are each non-empty.
+			v0 := timeseries[0].Points.Values[0]
+
+			if slices.Contains(
+				[]oxide.ValueArrayType{
+					oxide.ValueArrayTypeIntegerDistribution,
+					oxide.ValueArrayTypeDoubleDistribution,
+				},
+				v0.Values.Type(),
+			) {
+				measure := m.SetEmptyHistogram()
+				measure.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+				dataPoints := measure.DataPoints()
+				for _, series := range timeseries {
 					if err := addHistogram(
-						measure.DataPoints(),
+						dataPoints,
 						table,
 						series,
+						siloToName,
+						projectToName,
 					); err != nil {
 						s.logger.Warn(
 							"failed to add histogram metric",
@@ -285,41 +342,33 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 						)
 						parseErrors++
 					}
-				// Handle scalar gauge.
-				case v0.MetricType == oxide.MetricTypeGauge:
-					measure := m.SetEmptyGauge()
-					if err := addPoint(measure.DataPoints(), series); err != nil {
-						s.logger.Warn(
-							"failed to add gauge metric",
-							zap.String("metric", table.Name),
-							zap.Error(err),
-						)
-						parseErrors++
-					}
-
-				// Handle scalar counter.
-				default:
+				}
+			} else {
+				var dataPoints pmetric.NumberDataPointSlice
+				if v0.MetricType == oxide.MetricTypeGauge {
+					dataPoints = m.SetEmptyGauge().DataPoints()
+				} else {
 					measure := m.SetEmptySum()
-					// Always set aggregation temporality to cumulative. OxQL has both delta and
-					// cumulative counters, but both counter types use a cumulative value for their
-					// 0th observation. Because we add "| last 1" to all OxQL queries, all counter
-					// metrics are effectively of type cumulative for our purposes.
 					measure.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 					measure.SetIsMonotonic(true)
-
-					if err := addPoint(measure.DataPoints(), series); err != nil {
+					dataPoints = measure.DataPoints()
+				}
+				for _, series := range timeseries {
+					if err := addPoint(dataPoints, series, siloToName, projectToName); err != nil {
 						s.logger.Warn(
-							"failed to add sum metric",
+							"failed to add metric",
 							zap.String("metric", table.Name),
 							zap.Error(err),
 						)
 						parseErrors++
 					}
 				}
-
 			}
 		}
 	}
+
+	// Advance the window for the next scrape.
+	s.lastWindowEnd = windowEnd
 
 	if s.cfg.AddUtilizationMetrics {
 		if err := s.addSiloUtilization(ctx, metrics); err != nil {
@@ -400,33 +449,33 @@ func addSiloUtilizationMetrics(
 	}
 }
 
-func addLabels(series oxide.Timeseries, resource pcommon.Resource) {
+func addLabels(series oxide.Timeseries, attrs pcommon.Map) {
 	for key, value := range series.Fields {
 		switch v := value.Value.(type) {
 		case *oxide.FieldValueString:
-			resource.Attributes().PutStr(key, v.Value)
+			attrs.PutStr(key, v.Value)
 		case *oxide.FieldValueI8:
-			resource.Attributes().PutInt(key, int64(*v.Value))
+			attrs.PutInt(key, int64(*v.Value))
 		case *oxide.FieldValueI16:
-			resource.Attributes().PutInt(key, int64(*v.Value))
+			attrs.PutInt(key, int64(*v.Value))
 		case *oxide.FieldValueI32:
-			resource.Attributes().PutInt(key, int64(*v.Value))
+			attrs.PutInt(key, int64(*v.Value))
 		case *oxide.FieldValueI64:
-			resource.Attributes().PutInt(key, int64(*v.Value))
+			attrs.PutInt(key, int64(*v.Value))
 		case *oxide.FieldValueU8:
-			resource.Attributes().PutInt(key, int64(*v.Value))
+			attrs.PutInt(key, int64(*v.Value))
 		case *oxide.FieldValueU16:
-			resource.Attributes().PutInt(key, int64(*v.Value))
+			attrs.PutInt(key, int64(*v.Value))
 		case *oxide.FieldValueU32:
-			resource.Attributes().PutInt(key, int64(*v.Value))
+			attrs.PutInt(key, int64(*v.Value))
 		case *oxide.FieldValueU64:
-			resource.Attributes().PutInt(key, int64(*v.Value))
+			attrs.PutInt(key, int64(*v.Value))
 		case *oxide.FieldValueUuid:
-			resource.Attributes().PutStr(key, v.Value)
+			attrs.PutStr(key, v.Value)
 		case *oxide.FieldValueIpAddr:
-			resource.Attributes().PutStr(key, v.Value)
+			attrs.PutStr(key, v.Value)
 		case *oxide.FieldValueBool:
-			resource.Attributes().PutBool(key, *v.Value)
+			attrs.PutBool(key, *v.Value)
 		default:
 			// Unreachable: if we get an unknown FieldValue variant, the SDK will return an error
 			// from UnmarshalJSON.
@@ -435,15 +484,15 @@ func addLabels(series oxide.Timeseries, resource pcommon.Resource) {
 	}
 }
 
-func enrichLabels(resource pcommon.Resource, silos map[string]string, projects map[string]string) {
-	if siloID, ok := resource.Attributes().Get("silo_id"); ok {
+func enrichLabels(attrs pcommon.Map, silos map[string]string, projects map[string]string) {
+	if siloID, ok := attrs.Get("silo_id"); ok {
 		if siloName, ok := silos[siloID.Str()]; ok {
-			resource.Attributes().PutStr("silo_name", siloName)
+			attrs.PutStr("silo_name", siloName)
 		}
 	}
-	if projectID, ok := resource.Attributes().Get("project_id"); ok {
+	if projectID, ok := attrs.Get("project_id"); ok {
 		if projectName, ok := projects[projectID.Str()]; ok {
-			resource.Attributes().PutStr("project_name", projectName)
+			attrs.PutStr("project_name", projectName)
 		}
 	}
 }
@@ -452,6 +501,8 @@ func addHistogram(
 	dataPoints pmetric.HistogramDataPointSlice,
 	table oxide.OxqlTable,
 	series oxide.Timeseries,
+	silos map[string]string,
+	projects map[string]string,
 ) error {
 	timestamps := series.Points.Timestamps
 	startTimes := series.Points.StartTimes
@@ -514,11 +565,18 @@ func addHistogram(
 				table.Name,
 			)
 		}
+		addLabels(series, dp.Attributes())
+		enrichLabels(dp.Attributes(), silos, projects)
 	}
 	return nil
 }
 
-func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) error {
+func addPoint(
+	dataPoints pmetric.NumberDataPointSlice,
+	series oxide.Timeseries,
+	silos map[string]string,
+	projects map[string]string,
+) error {
 	timestamps := series.Points.Timestamps
 	startTimes := series.Points.StartTimes
 	hasStartTimes := len(startTimes) > 0
@@ -539,6 +597,8 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) 
 					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
 				}
 				dp.SetIntValue(int64(intValue))
+				addLabels(series, dp.Attributes())
+				enrichLabels(dp.Attributes(), silos, projects)
 			}
 		case *oxide.ValueArrayDouble:
 			if len(timestamps) != len(v.Values) {
@@ -555,6 +615,8 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) 
 					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
 				}
 				dp.SetDoubleValue(floatValue)
+				addLabels(series, dp.Attributes())
+				enrichLabels(dp.Attributes(), silos, projects)
 			}
 		case *oxide.ValueArrayBoolean:
 			if len(timestamps) != len(v.Values) {
@@ -575,6 +637,8 @@ func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) 
 					intValue = 1
 				}
 				dp.SetIntValue(int64(intValue))
+				addLabels(series, dp.Attributes())
+				enrichLabels(dp.Attributes(), silos, projects)
 			}
 		default:
 			return fmt.Errorf("got unexpected metric value type %T", point.Values.Value)

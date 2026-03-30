@@ -1,0 +1,58 @@
+# Example config using Prometheus remote write.
+#
+# This config pushes all data points with their original timestamps,
+# preserving full-resolution metric data even with longer collection
+# intervals. Use this instead of the pull-based Prometheus exporter
+# when you want to reduce load on oximeter without losing intermediate
+# data points.
+#
+# Requires Prometheus with --web.enable-remote-write-receiver, or a
+# compatible backend like VictoriaMetrics, Mimir, or Cortex.
+
+receivers:
+  oxide:
+    # Note: uncomment to configure Oxide API authentication. By default, the
+    # collector uses the $OXIDE_{PROFILE,HOST,TOKEN} environment variables.
+    # host: ${env:OXIDE_HOST}
+    # token: ${env:OXIDE_TOKEN}
+    metric_patterns:
+    - .*
+    add_labels: true
+    add_utilization_metrics: true
+    # With remote write, longer collection intervals reduce oximeter load
+    # without losing data points. The receiver queries a fixed window
+    # of (last_window_end, now] on each scrape, so windows tile without
+    # overlap or gaps.
+    collection_interval: 150s
+    query_offset: 15s
+
+processors:
+  batch:
+
+exporters:
+  prometheusremotewrite:
+    endpoint: "http://prometheus:9090/api/v1/write"
+    tls:
+      insecure: true
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  file:
+    path: /var/lib/otelcol/metrics.jsonl
+
+service:
+  telemetry:
+    metrics:
+      level: detailed
+      readers:
+      - pull:
+          exporter:
+            prometheus:
+              host: 0.0.0.0
+              port: 8888
+
+  pipelines:
+    metrics:
+      receivers: [oxide]
+      processors: [batch]
+      exporters: [prometheusremotewrite, file]

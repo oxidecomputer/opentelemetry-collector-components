@@ -1,0 +1,19 @@
+# Remote write example. Use with:
+#   docker compose -f docker-compose.yaml -f docker-compose.remotewrite.yaml up
+#
+# This pushes all metric data points to Prometheus via remote write,
+# preserving full-resolution data with longer collection intervals.
+
+services:
+  otelcol:
+    volumes:
+    - ../collector/config.remotewrite.example.yaml:/etc/otelcol/config.yaml:ro
+    - otelcol_data:/var/lib/otelcol
+
+  prometheus:
+    command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --web.enable-remote-write-receiver
+    volumes:
+    - ./prometheus.remotewrite.yml:/etc/prometheus/prometheus.yml:ro
+    - prometheus_data:/prometheus
