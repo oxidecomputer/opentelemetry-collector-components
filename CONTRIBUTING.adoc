@@ -13,9 +13,10 @@ make test
 
 To create a new release:
 
-1. Bump the versions in `collector/manifest.yaml` and push to `main`:
-* `dist.version`: the collector distribution version
-* The receiver go.mod version (`github.com/oxidecomputer/opentelemetry-collector-components`)
+1. Prepare the release and push to `main`:
+* Bump `dist.version` in `collector/manifest.yaml`
+* Bump the receiver go.mod version (`github.com/oxidecomputer/opentelemetry-collector-components`)
+* Update vendored oximeter metric schemas: `./scripts/vendor-metrics-schemas.sh <omicron-ref>`
 2. Tag the commit and push the tag. The tag must point to a commit on `main`, or the release workflow will fail.
 +
 [source,bash]

@@ -8,6 +8,7 @@ tool (
 )
 
 require (
+	github.com/BurntSushi/toml v1.6.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest v0.139.0
 	github.com/oxidecomputer/oxide.go v0.8.1-0.20260319134325-8a08d5f59e23
 	github.com/stretchr/testify v1.11.1
@@ -38,7 +39,6 @@ require (
 	github.com/Antonboom/errname v1.1.1 // indirect
 	github.com/Antonboom/nilnil v1.1.1 // indirect
 	github.com/Antonboom/testifylint v1.6.4 // indirect
-	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/Djarvur/go-err113 v0.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/MirrexOne/unqueryvet v1.4.0 // indirect

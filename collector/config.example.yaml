@@ -44,7 +44,7 @@ exporters:
 
   prometheus:
     endpoint: "0.0.0.0:9091"
-    translation_strategy: UnderscoreEscapingWithSuffixes
+    translation_strategy: UnderscoreEscapingWithoutSuffixes
     resource_to_telemetry_conversion:
       enabled: true
 

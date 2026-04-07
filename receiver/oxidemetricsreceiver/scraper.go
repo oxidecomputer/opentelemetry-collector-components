@@ -254,6 +254,15 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 
 				m := sm.Metrics().AppendEmpty()
 
+				// Look up metric metadata in parsed oximeter schemas.
+				//
+				// TODO: Provide metadata via oximeter, rather than parsing schemas in the receiver.
+				// See https://github.com/oxidecomputer/omicron/issues/6696 for details.
+				if schema, ok := metricMetadata[table.Name]; ok {
+					m.SetDescription(schema.Metric.Description)
+					m.SetUnit(formatUnits(schema.Metric.Units))
+				}
+
 				m.SetName(table.Name)
 
 				// Hack: get metadata from the 0th point.
