@@ -1623,7 +1623,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "HTTP Metrics",
+  "title": "HTTP metrics",
   "uid": "httpmetrics",
   "version": 1
 }
