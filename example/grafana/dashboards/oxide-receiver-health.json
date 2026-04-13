@@ -706,7 +706,7 @@
           "refId": "A"
         }
       ],
-      "title": "Metrics cardinality",
+      "title": "Top metrics cardinality",
       "transformations": [
         {
           "id": "organize",

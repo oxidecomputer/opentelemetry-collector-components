@@ -1,36 +1,30 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
   "editable": true,
-  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
   "links": [],
   "panels": [
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 5,
+      "title": "Sled utilization",
+      "type": "row"
+    },
+    {
       "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "fixed",
-            "fixedColor": "green"
+            "mode": "palette-classic"
           },
           "custom": {
             "axisBorderShow": false,
@@ -40,8 +34,8 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "barWidthFactor": 0.6,
-            "drawStyle": "bars",
-            "fillOpacity": 50,
+            "drawStyle": "line",
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -55,7 +49,7 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "showValues": false,
             "spanNulls": false,
             "stacking": {
@@ -66,6 +60,9 @@
               "mode": "off"
             }
           },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -83,85 +80,150 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 1
       },
-      "id": 4,
-      "interval": "1m",
+      "id": 1,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
         {
           "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=\"oxide\", oxide_host=\"$oxide_host\", operation_id=~\"$operation_id\", actor_silo_user_id=~\"$actor_silo_user_id\"} | json [$__auto]))",
-          "legendFormat": "total",
-          "queryType": "range",
-          "instant": false,
+          "expr": "1 - sum by (sled_id) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",state=\"idle\"}[$__rate_interval])) / sum by (sled_id) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\"}[$__rate_interval]))",
+          "legendFormat": "{{sled_id}}",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Log volume",
+      "title": "CPU utilization by sled",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 9
       },
-      "id": 1,
+      "id": 2,
       "options": {
-        "showTime": true,
-        "showLabels": false,
-        "showCommonLabels": false,
-        "wrapLogMessage": false,
-        "prettifyLogMessage": true,
-        "enableLogDetails": true,
-        "sortOrder": "Descending",
-        "dedupStrategy": "none"
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
           "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "{service_name=\"oxide\", oxide_host=\"$oxide_host\", operation_id=~\"$operation_id\", actor_silo_user_id=~\"$actor_silo_user_id\"} | json",
-          "queryType": "range",
+          "expr": "1 - sum by (sled_id, cpu_id) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",state=\"idle\"}[$__rate_interval])) / sum by (sled_id, cpu_id) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\"}[$__rate_interval]))",
+          "legendFormat": "{{sled_id}} cpu {{cpu_id}}",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Audit logs",
-      "type": "logs"
+      "title": "CPU utilization by sled and CPU",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "id": 6,
+      "title": "Zone utilization",
+      "type": "row"
     },
     {
       "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -202,17 +264,14 @@
               "mode": "off"
             }
           },
+          "unit": "ns",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
-                "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
+                "value": null
               }
             ]
           }
@@ -221,12 +280,11 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
-        "y": 16
+        "y": 18
       },
-      "id": 2,
-      "interval": "1m",
+      "id": 3,
       "options": {
         "legend": {
           "calcs": [],
@@ -235,32 +293,31 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
         {
           "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (operation_id) (count_over_time({service_name=\"oxide\", oxide_host=\"$oxide_host\", operation_id=~\"$operation_id\", actor_silo_user_id=~\"$actor_silo_user_id\"} | json [$__auto]))",
-          "legendFormat": "{{operation_id}}",
-          "queryType": "range",
-          "instant": false,
+          "expr": "sum by (zone_type) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",zone_type!=\"\",state=~\"sys|user\"}[$__rate_interval]))",
+          "legendFormat": "{{zone_type}}",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Log volume by operation",
+      "title": "Zone CPU usage by zone type",
       "type": "timeseries"
     },
     {
       "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -301,17 +358,14 @@
               "mode": "off"
             }
           },
+          "unit": "ns",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
-                "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
+                "value": null
               }
             ]
           }
@@ -320,12 +374,11 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 16
+        "w": 24,
+        "x": 0,
+        "y": 26
       },
-      "id": 3,
-      "interval": "1m",
+      "id": 4,
       "options": {
         "legend": {
           "calcs": [],
@@ -334,61 +387,46 @@
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
         {
           "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
+            "type": "prometheus",
+            "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (actor_silo_user_id) (count_over_time({service_name=\"oxide\", oxide_host=\"$oxide_host\", operation_id=~\"$operation_id\", actor_silo_user_id=~\"$actor_silo_user_id\"} [$__auto]))",
-          "legendFormat": "{{actor_silo_user_id}}",
-          "queryType": "range",
-          "instant": false,
+          "expr": "topk(20, sum by (zone_name) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",state=~\"sys|user\"}[$__rate_interval])))",
+          "legendFormat": "{{zone_name}}",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Log volume by user",
+      "title": "Top zone CPU usage by zone name",
       "type": "timeseries"
     }
   ],
-  "preload": false,
   "schemaVersion": 42,
-  "tags": [],
   "templating": {
     "list": [
-      {
-        "name": "datasource",
-        "type": "datasource",
-        "query": "loki",
-        "current": {
-          "text": "Loki",
-          "value": "loki"
-        },
-        "regex": ""
-      },
       {
         "current": {
           "text": "",
           "value": ""
         },
         "datasource": {
-          "type": "loki",
-          "uid": "${datasource}"
+          "type": "prometheus",
+          "uid": "prometheus"
         },
-        "definition": "",
+        "definition": "label_values(oxide_host)",
         "multi": false,
         "name": "oxide_host",
-        "label": "Host",
         "query": {
-          "label": "oxide_host",
-          "stream": "{service_name=\"oxide\"}",
-          "type": 1
+          "qryType": 1,
+          "query": "label_values(oxide_host)"
         },
         "refresh": 2,
         "sort": 1,
@@ -397,49 +435,22 @@
       {
         "allValue": ".*",
         "current": {
+          "selected": true,
           "text": "All",
           "value": "$__all"
         },
         "datasource": {
-          "type": "loki",
-          "uid": "${datasource}"
+          "type": "prometheus",
+          "uid": "prometheus"
         },
-        "definition": "",
+        "definition": "label_values(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\"}, sled_id)",
         "includeAll": true,
         "multi": true,
-        "name": "operation_id",
-        "label": "Operation",
-        "options": [],
+        "name": "sled_id",
+        "label": "Sled",
         "query": {
-          "label": "operation_id",
-          "stream": "{service_name=\"oxide\", oxide_host=\"$oxide_host\"}",
-          "type": 1
-        },
-        "refresh": 2,
-        "regex": "",
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "allValue": ".*",
-        "current": {
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "loki",
-          "uid": "${datasource}"
-        },
-        "definition": "",
-        "includeAll": true,
-        "multi": true,
-        "name": "actor_silo_user_id",
-        "label": "User",
-        "options": [],
-        "query": {
-          "label": "actor_silo_user_id",
-          "stream": "{service_name=\"oxide\", oxide_host=\"$oxide_host\"}",
-          "type": 1
+          "qryType": 1,
+          "query": "label_values(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\"}, sled_id)"
         },
         "refresh": 2,
         "regex": "",
@@ -454,7 +465,6 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Audit logs",
-  "uid": "auditlogs",
-  "version": 1
+  "title": "Internal resource utilization",
+  "uid": "internal-resource-util"
 }
