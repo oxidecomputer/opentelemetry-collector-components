@@ -13,6 +13,8 @@ receivers:
     - hardware_component:.*
     - http_service:.*
     - instance_network_interface:.*
+    - kstat_sampler:.*
+    - oximeter_collector:.*
     - virtual_disk:.*
     - virtual_machine:.*
     add_labels: true
