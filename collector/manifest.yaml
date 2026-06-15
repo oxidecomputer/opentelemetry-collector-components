@@ -57,3 +57,7 @@ providers:
 
 replaces:
   - github.com/oxidecomputer/opentelemetry-collector-components => ..
+  # swag/loading@v0.25.4 pins go-openapi/testify@v2.0.2, whose
+  # enable/yaml/v2 imports a now-removed testify/v2/assert/yaml package.
+  # Bump loading to a patch that pins testify@v2.4.0 (existing paths).
+  - github.com/go-openapi/swag/loading => github.com/go-openapi/swag/loading v0.25.5
