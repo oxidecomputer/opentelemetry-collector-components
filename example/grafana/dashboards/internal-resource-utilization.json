@@ -228,7 +228,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
             "axisBorderShow": false,
@@ -264,7 +264,7 @@
               "mode": "off"
             }
           },
-          "unit": "ns",
+          "unit": "suffix:cores",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -305,7 +305,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_type) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_type!=\"\",state=~\"sys|user\"}[$__rate_interval]))",
+          "expr": "sum by (zone_type) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_type!=\"\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "{{zone_type}}",
           "range": true,
           "refId": "A"
@@ -322,7 +322,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
             "axisBorderShow": false,
@@ -358,7 +358,7 @@
               "mode": "off"
             }
           },
-          "unit": "ns",
+          "unit": "suffix:cores",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -399,7 +399,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "topk(20, sum by (zone_name) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",state=~\"sys|user\"}[$__rate_interval])))",
+          "expr": "topk(20, sum by (zone_name) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",state=~\"sys|user\"}[$__rate_interval]))) / 1e9",
           "legendFormat": "{{zone_name}}",
           "range": true,
           "refId": "A"
@@ -416,7 +416,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
             "axisBorderShow": false,
@@ -452,7 +452,7 @@
               "mode": "off"
             }
           },
-          "unit": "ns",
+          "unit": "suffix:cores",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -493,7 +493,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_type!=\"propolis-server\",state=~\"sys|user\"}[$__rate_interval]))",
+          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_type!=\"propolis-server\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "control plane",
           "range": true,
           "refId": "A"
@@ -504,7 +504,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_type=\"propolis-server\",state=~\"sys|user\"}[$__rate_interval]))",
+          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_type=\"propolis-server\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "user instances",
           "range": true,
           "refId": "B"
@@ -521,7 +521,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
             "axisBorderShow": false,
@@ -557,7 +557,7 @@
               "mode": "off"
             }
           },
-          "unit": "ns",
+          "unit": "suffix:cores",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -598,7 +598,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_type) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_name=~\"oxz_.*\",zone_type!=\"propolis-server\",zone_type!=\"\",state=~\"sys|user\"}[$__rate_interval]))",
+          "expr": "sum by (zone_type) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_name=~\"oxz_.*\",zone_type!=\"propolis-server\",zone_type!=\"\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "{{zone_type}}",
           "range": true,
           "refId": "A"
@@ -609,10 +609,21 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_name=\"oxz_switch\",state=~\"sys|user\"}[$__rate_interval]))",
+          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_name=\"oxz_switch\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "switch",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_name=\"global\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
+          "legendFormat": "global",
+          "range": true,
+          "refId": "C"
         }
       ],
       "title": "Control plane CPU by zone type",
