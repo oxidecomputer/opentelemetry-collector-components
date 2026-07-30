@@ -452,6 +452,7 @@
               "mode": "off"
             }
           },
+          "min": 0,
           "unit": "suffix:cores",
           "mappings": [],
           "thresholds": {
@@ -557,6 +558,7 @@
               "mode": "off"
             }
           },
+          "min": 0,
           "unit": "suffix:cores",
           "mappings": [],
           "thresholds": {
