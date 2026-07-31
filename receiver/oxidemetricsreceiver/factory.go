@@ -2,6 +2,7 @@ package oxidemetricsreceiver
 
 import (
 	"context"
+	"time"
 
 	"github.com/oxidecomputer/oxide.go/oxide"
 	"go.opentelemetry.io/collector/component"
@@ -23,9 +24,10 @@ func NewFactory() receiver.Factory {
 // createDefaultConfig creates the default configuration for the receiver.
 func createDefaultConfig() component.Config {
 	return &Config{
-		MetricPatterns:    []string{".*"},
-		ScrapeConcurrency: 16,
-		QueryLookback:     "5m",
+		MetricPatterns:        []string{".*"},
+		ScrapeConcurrency:     16,
+		QueryLookback:         "5m",
+		SchemaRefreshInterval: 5 * time.Minute,
 	}
 }
 
