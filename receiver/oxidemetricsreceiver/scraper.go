@@ -26,7 +26,9 @@ type oxideScraper struct {
 	logger   *zap.Logger
 	host     string
 
-	metricNames []string
+	metricPatterns     []*regexp.Regexp
+	schemasRefreshedAt time.Time
+	metricNames        []string
 
 	apiRequestDuration metric.Float64Gauge
 	scrapeCount        metric.Int64Counter
@@ -54,7 +56,14 @@ func newOxideScraper(
 	}
 }
 
-func (s *oxideScraper) Start(ctx context.Context, _ component.Host) error {
+// ensureSchemas fetches metric schemas from the API if empty or stale. This ensures that the
+// receiver discovers changes in metric schemas over time.
+func (s *oxideScraper) ensureSchemas(ctx context.Context) error {
+	now := time.Now()
+	if len(s.metricNames) > 0 && s.schemasRefreshedAt.Add(s.cfg.SchemaRefreshInterval).After(now) {
+		return nil
+	}
+
 	schemas, err := s.client.SystemTimeseriesSchemaListAllPages(
 		ctx,
 		oxide.SystemTimeseriesSchemaListParams{},
@@ -63,6 +72,24 @@ func (s *oxideScraper) Start(ctx context.Context, _ component.Host) error {
 		return err
 	}
 
+	metricNames := []string{}
+	for _, schema := range schemas {
+		for _, regexp := range s.metricPatterns {
+			if regexp.MatchString(string(schema.TimeseriesName)) {
+				metricNames = append(metricNames, string(schema.TimeseriesName))
+			}
+		}
+	}
+
+	s.logger.Info("collecting metrics", zap.Any("metrics", metricNames))
+
+	s.metricNames = metricNames
+	s.schemasRefreshedAt = now
+
+	return nil
+}
+
+func (s *oxideScraper) Start(_ context.Context, _ component.Host) error {
 	regexps := []*regexp.Regexp{}
 	for _, pattern := range s.cfg.MetricPatterns {
 		regexp, err := regexp.Compile(pattern)
@@ -71,23 +98,13 @@ func (s *oxideScraper) Start(ctx context.Context, _ component.Host) error {
 		}
 		regexps = append(regexps, regexp)
 	}
-
-	metricNames := []string{}
-	for _, schema := range schemas {
-		for _, regexp := range regexps {
-			if regexp.MatchString(string(schema.TimeseriesName)) {
-				metricNames = append(metricNames, string(schema.TimeseriesName))
-			}
-		}
-	}
-	s.metricNames = metricNames
-
-	s.logger.Info("collecting metrics", zap.Any("metrics", metricNames))
+	s.metricPatterns = regexps
 
 	meter := s.settings.MeterProvider.Meter(
 		"github.com/oxidecomputer/opentelemetry-collector-components/receiver/oxidemetricsreceiver",
 	)
 
+	var err error
 	s.apiRequestDuration, err = meter.Float64Gauge(
 		"oxide_receiver.api_request.duration",
 		metric.WithDescription("Duration of API requests to the Oxide API"),
@@ -127,6 +144,10 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 
 	var group errgroup.Group
 	group.SetLimit(s.cfg.ScrapeConcurrency)
+
+	if err := s.ensureSchemas(ctx); err != nil {
+		return metrics, fmt.Errorf("refreshing metric schemas: %+w", err)
+	}
 
 	type queryResult struct {
 		response *oxide.OxqlQueryResult
