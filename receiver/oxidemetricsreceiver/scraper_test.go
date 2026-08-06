@@ -274,7 +274,7 @@ func TestAddPoint(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dataPoints := pmetric.NewNumberDataPointSlice()
 
-			err := addPoint(dataPoints, tc.series)
+			err := addPoint(dataPoints, tc.series, tc.series.Points.Values[0])
 
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
@@ -409,7 +409,7 @@ func TestAddHistogram(t *testing.T) {
 					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
 					dp.SetCount(6) // 1+2+3
-					dp.ExplicitBounds().FromRaw([]float64{0, 1, 2})
+					dp.ExplicitBounds().FromRaw([]float64{1, 2})
 					dp.BucketCounts().FromRaw([]uint64{1, 2, 3})
 					return dp
 				}(),
@@ -446,7 +446,7 @@ func TestAddHistogram(t *testing.T) {
 					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
 					dp.SetCount(6) // 1+2+3
-					dp.ExplicitBounds().FromRaw([]float64{0.0, 1.0, 2.0})
+					dp.ExplicitBounds().FromRaw([]float64{1.0, 2.0})
 					dp.BucketCounts().FromRaw([]uint64{1, 2, 3})
 					return dp
 				}(),
@@ -473,7 +473,7 @@ func TestAddHistogram(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			histogramDataPoints := pmetric.NewHistogramDataPointSlice()
 
-			err := addHistogram(histogramDataPoints, table, tc.series)
+			err := addHistogram(histogramDataPoints, table, tc.series, tc.series.Points.Values[0])
 
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
