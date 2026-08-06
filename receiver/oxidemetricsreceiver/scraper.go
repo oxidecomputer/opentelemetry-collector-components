@@ -277,16 +277,26 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 
 				m.SetName(table.Name)
 
-				// Hack: get metadata from the 0th point.
-				// TODO(jmcarp): Move this to the timeseries level in the api.
+				// All OxQL queries should return exactly one metric value, unless the query is
+				// empty. OxQL only returns multiple values when the query includes a join, which
+				// our queries do not.
 				if len(series.Points.Values) == 0 {
 					continue
 				}
-				v0 := series.Points.Values[0]
+				if len(series.Points.Values) > 1 {
+					s.logger.Warn(
+						"expected exactly one metric value",
+						zap.String("metric", table.Name),
+						zap.Int("values", len(series.Points.Values)),
+					)
+					parseErrors++
+					continue
+				}
+				metricValue := series.Points.Values[0]
 
 				switch {
 				// Handle histograms.
-				case slices.Contains([]oxide.ValueArrayType{oxide.ValueArrayTypeIntegerDistribution, oxide.ValueArrayTypeDoubleDistribution}, v0.Values.Type()):
+				case slices.Contains([]oxide.ValueArrayType{oxide.ValueArrayTypeIntegerDistribution, oxide.ValueArrayTypeDoubleDistribution}, metricValue.Values.Type()):
 					measure := m.SetEmptyHistogram()
 					// Always set aggregation temporality to cumulative. OxQL has both delta and
 					// cumulative counters, but both counter types use a cumulative value for their
@@ -298,6 +308,7 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 						measure.DataPoints(),
 						table,
 						series,
+						metricValue,
 					); err != nil {
 						s.logger.Warn(
 							"failed to add histogram metric",
@@ -307,9 +318,9 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 						parseErrors++
 					}
 				// Handle scalar gauge.
-				case v0.MetricType == oxide.MetricTypeGauge:
+				case metricValue.MetricType == oxide.MetricTypeGauge:
 					measure := m.SetEmptyGauge()
-					if err := addPoint(measure.DataPoints(), series); err != nil {
+					if err := addPoint(measure.DataPoints(), series, metricValue); err != nil {
 						s.logger.Warn(
 							"failed to add gauge metric",
 							zap.String("metric", table.Name),
@@ -328,7 +339,7 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 					measure.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 					measure.SetIsMonotonic(true)
 
-					if err := addPoint(measure.DataPoints(), series); err != nil {
+					if err := addPoint(measure.DataPoints(), series, metricValue); err != nil {
 						s.logger.Warn(
 							"failed to add sum metric",
 							zap.String("metric", table.Name),
@@ -473,133 +484,158 @@ func addHistogram(
 	dataPoints pmetric.HistogramDataPointSlice,
 	table oxide.OxqlTable,
 	series oxide.Timeseries,
+	metricValue oxide.Values,
 ) error {
 	timestamps := series.Points.Timestamps
 	startTimes := series.Points.StartTimes
-	for idx, point := range series.Points.Values {
-		dp := dataPoints.AppendEmpty()
-		dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-		if len(startTimes) > 0 {
-			dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
-		}
 
-		switch v := point.Values.Value.(type) {
-		case *oxide.ValueArrayIntegerDistribution:
-			if len(timestamps) != len(v.Values) {
-				return fmt.Errorf(
-					"invariant violated: number of timestamps %d must match number of values %d",
-					len(timestamps),
-					len(v.Values),
-				)
-			}
-			for _, distValue := range v.Values {
-				bins := make([]float64, len(distValue.Bins))
-				for i := range distValue.Bins {
-					bins[i] = float64(distValue.Bins[i])
-				}
-				dp.ExplicitBounds().FromRaw(bins)
-
-				counts := dp.BucketCounts()
-				var total uint64
-				for _, count := range distValue.Counts {
-					counts.Append(count)
-					total += count
-				}
-				dp.SetCount(total)
-				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-			}
-		case *oxide.ValueArrayDoubleDistribution:
-			if len(timestamps) != len(v.Values) {
-				return fmt.Errorf(
-					"invariant violated: number of timestamps %d must match number of values %d",
-					len(timestamps),
-					len(v.Values),
-				)
-			}
-			for _, distValue := range v.Values {
-				dp.ExplicitBounds().FromRaw(distValue.Bins)
-
-				counts := dp.BucketCounts()
-				var total uint64
-				for _, count := range distValue.Counts {
-					counts.Append(count)
-					total += count
-				}
-				dp.SetCount(total)
-				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-			}
-		default:
+	switch v := metricValue.Values.Value.(type) {
+	case *oxide.ValueArrayIntegerDistribution:
+		if len(timestamps) != len(v.Values) {
 			return fmt.Errorf(
-				"unexpected histogram type %T for metric %s",
-				point.Values.Value,
-				table.Name,
+				"invariant violated: number of timestamps %d must match number of values %d",
+				len(timestamps),
+				len(v.Values),
 			)
 		}
+		for pointIdx, distValue := range v.Values {
+			if len(distValue.Bins) == 0 {
+				continue
+			}
+
+			dp := dataPoints.AppendEmpty()
+			dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[pointIdx]))
+			if len(startTimes) > 0 {
+				dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[pointIdx]))
+			}
+
+			// OxQL histograms model bins using a slice where each value represents the lower
+			// bound of the bin. A slice like [0, 10, 20, 30, 40] represents five bins: [0, 10),
+			// [10, 20), [20, 30), [30, 40), and [40, ∞). OpenTelemetry histograms represent
+			// buckets differently: each value represents the upper bound of the bin, and
+			// there's an implied bin that captures values greater than the final value of the
+			// slice. OpenTelemetry models the histogram above as [10, 20, 30, 40]. To make
+			// these representations match, we just drop the 0th OxQL bin and use the result as
+			// the OpenTelemetry bins. Note also that OxQL bins are closed at their lower bound
+			// and open at their upper bound. e.g. [0, 10). OpenTelemetry bins are open at the
+			// lower bound and closed at the upper bound: (0, 10]. It's not possible to
+			// reconstruct that boundary behavior while converting from OxQL histograms to
+			// OpenTelemetry histograms, so we accept the difference.
+			bins := make([]float64, len(distValue.Bins)-1)
+			for binIdx, binValue := range distValue.Bins[1:] {
+				bins[binIdx] = float64(binValue)
+			}
+			dp.ExplicitBounds().FromRaw(bins)
+
+			counts := dp.BucketCounts()
+			var total uint64
+			for _, count := range distValue.Counts {
+				counts.Append(count)
+				total += count
+			}
+			dp.SetCount(total)
+		}
+	case *oxide.ValueArrayDoubleDistribution:
+		if len(timestamps) != len(v.Values) {
+			return fmt.Errorf(
+				"invariant violated: number of timestamps %d must match number of values %d",
+				len(timestamps),
+				len(v.Values),
+			)
+		}
+		for idx, distValue := range v.Values {
+			if len(distValue.Bins) == 0 {
+				continue
+			}
+
+			dp := dataPoints.AppendEmpty()
+			dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+			if len(startTimes) > 0 {
+				dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+			}
+
+			dp.ExplicitBounds().FromRaw(distValue.Bins[1:])
+			counts := dp.BucketCounts()
+			var total uint64
+			for _, count := range distValue.Counts {
+				counts.Append(count)
+				total += count
+			}
+			dp.SetCount(total)
+		}
+	default:
+		return fmt.Errorf(
+			"unexpected histogram type %T for metric %s",
+			metricValue.Values.Value,
+			table.Name,
+		)
 	}
 	return nil
 }
 
-func addPoint(dataPoints pmetric.NumberDataPointSlice, series oxide.Timeseries) error {
+func addPoint(
+	dataPoints pmetric.NumberDataPointSlice,
+	series oxide.Timeseries,
+	metricValue oxide.Values,
+) error {
 	timestamps := series.Points.Timestamps
 	startTimes := series.Points.StartTimes
 	hasStartTimes := len(startTimes) > 0
-	for _, point := range series.Points.Values {
-		switch v := point.Values.Value.(type) {
-		case *oxide.ValueArrayInteger:
-			if len(timestamps) != len(v.Values) {
-				return fmt.Errorf(
-					"invariant violated: number of timestamps %d must match number of values %d",
-					len(timestamps),
-					len(v.Values),
-				)
-			}
-			for idx, intValue := range v.Values {
-				dp := dataPoints.AppendEmpty()
-				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-				if hasStartTimes {
-					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
-				}
-				dp.SetIntValue(int64(intValue))
-			}
-		case *oxide.ValueArrayDouble:
-			if len(timestamps) != len(v.Values) {
-				return fmt.Errorf(
-					"invariant violated: number of timestamps %d must match number of values %d",
-					len(timestamps),
-					len(v.Values),
-				)
-			}
-			for idx, floatValue := range v.Values {
-				dp := dataPoints.AppendEmpty()
-				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-				if hasStartTimes {
-					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
-				}
-				dp.SetDoubleValue(floatValue)
-			}
-		case *oxide.ValueArrayBoolean:
-			if len(timestamps) != len(v.Values) {
-				return fmt.Errorf(
-					"invariant violated: number of timestamps %d must match number of values %d",
-					len(timestamps),
-					len(v.Values),
-				)
-			}
-			for idx, boolValue := range v.Values {
-				dp := dataPoints.AppendEmpty()
-				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-				if hasStartTimes {
-					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
-				}
-				intValue := 0
-				if boolValue {
-					intValue = 1
-				}
-				dp.SetIntValue(int64(intValue))
-			}
-		default:
-			return fmt.Errorf("got unexpected metric value type %T", point.Values.Value)
+	switch v := metricValue.Values.Value.(type) {
+	case *oxide.ValueArrayInteger:
+		if len(timestamps) != len(v.Values) {
+			return fmt.Errorf(
+				"invariant violated: number of timestamps %d must match number of values %d",
+				len(timestamps),
+				len(v.Values),
+			)
 		}
+		for idx, intValue := range v.Values {
+			dp := dataPoints.AppendEmpty()
+			dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+			if hasStartTimes {
+				dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+			}
+			dp.SetIntValue(int64(intValue))
+		}
+	case *oxide.ValueArrayDouble:
+		if len(timestamps) != len(v.Values) {
+			return fmt.Errorf(
+				"invariant violated: number of timestamps %d must match number of values %d",
+				len(timestamps),
+				len(v.Values),
+			)
+		}
+		for idx, floatValue := range v.Values {
+			dp := dataPoints.AppendEmpty()
+			dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+			if hasStartTimes {
+				dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+			}
+			dp.SetDoubleValue(floatValue)
+		}
+	case *oxide.ValueArrayBoolean:
+		if len(timestamps) != len(v.Values) {
+			return fmt.Errorf(
+				"invariant violated: number of timestamps %d must match number of values %d",
+				len(timestamps),
+				len(v.Values),
+			)
+		}
+		for idx, boolValue := range v.Values {
+			dp := dataPoints.AppendEmpty()
+			dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+			if hasStartTimes {
+				dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+			}
+			intValue := 0
+			if boolValue {
+				intValue = 1
+			}
+			dp.SetIntValue(int64(intValue))
+		}
+	default:
+		return fmt.Errorf("got unexpected metric value type %T", metricValue.Values.Value)
 	}
 	return nil
 }
