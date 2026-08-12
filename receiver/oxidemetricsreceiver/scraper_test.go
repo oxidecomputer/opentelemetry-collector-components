@@ -160,7 +160,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Value: &oxide.ValueArrayInteger{Values: []int{42}},
+								Value: &oxide.ValueArrayInteger{Values: []*int{oxide.NewPointer(42)}},
 							},
 						},
 					},
@@ -184,7 +184,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Value: &oxide.ValueArrayInteger{Values: []int{42}},
+								Value: &oxide.ValueArrayInteger{Values: []*int{oxide.NewPointer(42)}},
 							},
 						},
 					},
@@ -210,7 +210,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Value: &oxide.ValueArrayDouble{Values: []float64{42.5}},
+								Value: &oxide.ValueArrayDouble{Values: []*float64{oxide.NewPointer(42.5)}},
 							},
 						},
 					},
@@ -236,7 +236,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Value: &oxide.ValueArrayBoolean{Values: []bool{true}},
+								Value: &oxide.ValueArrayBoolean{Values: []*bool{oxide.NewPointer(true)}},
 							},
 						},
 					},
@@ -262,7 +262,7 @@ func TestAddPoint(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Value: &oxide.ValueArrayString{Values: []string{"not a number"}},
+								Value: &oxide.ValueArrayString{Values: []*string{oxide.NewPointer("not a number")}},
 							},
 						},
 					},
@@ -382,13 +382,13 @@ func TestAddHistogram(t *testing.T) {
 			name: "int: success",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
-					StartTimes: []time.Time{startTime},
-					Timestamps: []time.Time{now},
+					StartTimes: []time.Time{startTime, startTime},
+					Timestamps: []time.Time{now, now.Add(time.Second)},
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
 								Value: &oxide.ValueArrayIntegerDistribution{
-									Values: []oxide.Distributionint64{
+									Values: []*oxide.Distributionint64{
 										{
 											Bins:   []int{0, 1, 2},
 											Counts: []uint64{1, 2, 3},
@@ -396,6 +396,9 @@ func TestAddHistogram(t *testing.T) {
 											P90:    1.9,
 											P99:    1.99,
 										},
+										// Note: Add a nil value to ensure that it's dropped as
+										// expected.
+										nil,
 									},
 								},
 							},
@@ -419,13 +422,13 @@ func TestAddHistogram(t *testing.T) {
 			name: "double: success",
 			series: oxide.Timeseries{
 				Points: oxide.Points{
-					StartTimes: []time.Time{startTime},
-					Timestamps: []time.Time{now},
+					StartTimes: []time.Time{startTime, startTime},
+					Timestamps: []time.Time{now, now.Add(time.Second)},
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
 								Value: &oxide.ValueArrayDoubleDistribution{
-									Values: []oxide.Distributiondouble{
+									Values: []*oxide.Distributiondouble{
 										{
 											Bins:   []float64{0.0, 1.0, 2.0},
 											Counts: []uint64{1, 2, 3},
@@ -433,6 +436,7 @@ func TestAddHistogram(t *testing.T) {
 											P90:    1.9,
 											P99:    1.99,
 										},
+										nil,
 									},
 								},
 							},
@@ -461,7 +465,7 @@ func TestAddHistogram(t *testing.T) {
 					Values: []oxide.Values{
 						{
 							Values: oxide.ValueArray{
-								Value: &oxide.ValueArrayInteger{Values: []int{1, 2, 3}},
+								Value: &oxide.ValueArrayInteger{Values: []*int{oxide.NewPointer(1), oxide.NewPointer(2), oxide.NewPointer(3)}},
 							},
 						},
 					},

@@ -499,6 +499,9 @@ func addHistogram(
 			)
 		}
 		for pointIdx, distValue := range v.Values {
+			if distValue == nil {
+				continue
+			}
 			if len(distValue.Bins) == 0 {
 				continue
 			}
@@ -544,6 +547,9 @@ func addHistogram(
 			)
 		}
 		for idx, distValue := range v.Values {
+			if distValue == nil {
+				continue
+			}
 			if len(distValue.Bins) == 0 {
 				continue
 			}
@@ -591,12 +597,17 @@ func addPoint(
 			)
 		}
 		for idx, intValue := range v.Values {
-			dp := dataPoints.AppendEmpty()
-			dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-			if hasStartTimes {
-				dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+			// OxQL can emit null values for metrics queries. We don't have an obvious way to
+			// represent these values in OTLP, and don't want to replace missing values with zero
+			// values, so simply omit the datapoint entirely in this case.
+			if intValue != nil {
+				dp := dataPoints.AppendEmpty()
+				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+				if hasStartTimes {
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+				}
+				dp.SetIntValue(int64(*intValue))
 			}
-			dp.SetIntValue(int64(intValue))
 		}
 	case *oxide.ValueArrayDouble:
 		if len(timestamps) != len(v.Values) {
@@ -607,12 +618,14 @@ func addPoint(
 			)
 		}
 		for idx, floatValue := range v.Values {
-			dp := dataPoints.AppendEmpty()
-			dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-			if hasStartTimes {
-				dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+			if floatValue != nil {
+				dp := dataPoints.AppendEmpty()
+				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+				if hasStartTimes {
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+				}
+				dp.SetDoubleValue(*floatValue)
 			}
-			dp.SetDoubleValue(floatValue)
 		}
 	case *oxide.ValueArrayBoolean:
 		if len(timestamps) != len(v.Values) {
@@ -623,16 +636,18 @@ func addPoint(
 			)
 		}
 		for idx, boolValue := range v.Values {
-			dp := dataPoints.AppendEmpty()
-			dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
-			if hasStartTimes {
-				dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+			if boolValue != nil {
+				dp := dataPoints.AppendEmpty()
+				dp.SetTimestamp(pcommon.NewTimestampFromTime(timestamps[idx]))
+				if hasStartTimes {
+					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTimes[idx]))
+				}
+				intValue := 0
+				if *boolValue {
+					intValue = 1
+				}
+				dp.SetIntValue(int64(intValue))
 			}
-			intValue := 0
-			if boolValue {
-				intValue = 1
-			}
-			dp.SetIntValue(int64(intValue))
 		}
 	default:
 		return fmt.Errorf("got unexpected metric value type %T", metricValue.Values.Value)
