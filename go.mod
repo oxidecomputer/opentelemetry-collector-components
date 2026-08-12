@@ -9,7 +9,7 @@ tool (
 
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest v0.139.0
-	github.com/oxidecomputer/oxide.go v0.10.0
+	github.com/oxidecomputer/oxide.go v0.10.1-0.20260812160657-6f808ccc9ea4
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/collector/component v1.45.0
 	go.opentelemetry.io/collector/component/componenttest v0.139.0
