@@ -152,7 +152,11 @@ func (s *oxideScraper) Start(ctx context.Context, _ component.Host) error {
 	if err != nil {
 		return fmt.Errorf("failed to create windowTruncateDuration gauge: %w", err)
 	}
-	s.windowTruncateDuration.Add(ctx, 0)
+	s.windowTruncateDuration.Add(
+		ctx,
+		0,
+		metric.WithAttributes(attribute.String("oxide.host", s.host)),
+	)
 
 	return nil
 }
@@ -228,7 +232,11 @@ func (s *oxideScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
 			zap.Duration("truncated", truncated),
 			zap.Duration("max", s.maxWindowSize),
 		)
-		s.windowTruncateDuration.Add(ctx, truncated.Seconds())
+		s.windowTruncateDuration.Add(
+			ctx,
+			truncated.Seconds(),
+			metric.WithAttributes(attribute.String("oxide.host", s.host)),
+		)
 	}
 
 	for idx, metricName := range s.metricNames {

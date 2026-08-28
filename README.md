@@ -139,8 +139,21 @@ Each log entry contains the full audit log JSON. The values are `[timestamp, bod
   }
 }
 ```
-
 </details>
+
+### Running the collector in `window` query mode
+
+By default, the metrics receiver sets `query_mode` to `last`. In this mode, it queries each metric of interest using OxQL, then applies the `last 1` operation to look up the most recent sample for each series. This mode is conceptually simple, and it aligns with the Prometheus exporter, which also exposes only the most recent sample for each series. But it has a few disadvantages: it discards samples that fall between collection intervals, and as a result, it requires a short collection interval (and potentially high query concurrency) to capture metrics at high temporal fidelity. This, in turn, increases load on Oxide's backing metrics datastore, which competes with user workloads on the rack.
+
+In order to export metrics at higher temporal fidelity and with less load on the rack, the receiver also supports a `window` query mode. In this mode, the collector requests all samples since the last collection interval, and doesn't use the `last 1` operation. This allows the collector to collect metrics less often without sacrificing temporal fidelity. Because an OxQL query that fetches the most recent sample of a timeseries isn't meaningfully more expensive than a query that fetches the last few minutes of data, you can reduce the Oxide control plane overhead of metrics export by increasing the collection interval.
+
+Note that this query mode doesn't work well with the Prometheus exporter, which only provides the most recent sample for each series. Instead, use the Prometheus remote write exporter, which pushes the entire batch of metrics, rather than waiting for Prometheus to pull.
+
+To run the collector in `window` mode with Prometheus remote write, run:
+
+```bash
+docker compose -f example/docker-compose.yaml -f example/docker-compose.window.yaml up
+```
 
 ## Example Dashboards
 

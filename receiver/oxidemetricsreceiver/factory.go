@@ -82,6 +82,6 @@ func makeMetricsReceiver(
 		&rCfg.ControllerConfig,
 		settings,
 		consumer,
-		scraperhelper.AddScraper(component.MustNewType("oxide"), s),
+		scraperhelper.AddMetricsScraper(component.MustNewType("oxide"), s),
 	)
 }

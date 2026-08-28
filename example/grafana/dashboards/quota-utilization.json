@@ -32,7 +32,14 @@
       "id": 9,
       "panels": [],
       "title": "CPU",
-      "type": "row"
+      "type": "row",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": null
+          }
+        }
+      }
     },
     {
       "datasource": {
@@ -53,10 +60,6 @@
               {
                 "color": "green",
                 "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
@@ -76,7 +79,9 @@
         "namePlacement": "left",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -151,10 +156,6 @@
               {
                 "color": "green",
                 "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -209,7 +210,14 @@
       "id": 8,
       "panels": [],
       "title": "Memory",
-      "type": "row"
+      "type": "row",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": null
+          }
+        }
+      }
     },
     {
       "datasource": {
@@ -230,10 +238,6 @@
               {
                 "color": "green",
                 "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
@@ -253,7 +257,9 @@
         "namePlacement": "left",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -328,10 +334,6 @@
               {
                 "color": "green",
                 "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
@@ -387,7 +389,14 @@
       "id": 10,
       "panels": [],
       "title": "Disk",
-      "type": "row"
+      "type": "row",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": null
+          }
+        }
+      }
     },
     {
       "datasource": {
@@ -408,10 +417,6 @@
               {
                 "color": "green",
                 "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
@@ -431,7 +436,9 @@
         "namePlacement": "left",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -506,10 +513,6 @@
               {
                 "color": "green",
                 "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },

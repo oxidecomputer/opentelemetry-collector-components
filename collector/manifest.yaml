@@ -6,58 +6,54 @@ dist:
   module: github.com/oxidecomputer/otelcol-oxide
   name: otelcol-oxide
   description: OpenTelemetry Collector with Oxide receiver
-  version: 0.5.2
+  version: 0.6.0
   output_path: ./dist
   build_tags: "grpcnotrace"
 
 extensions:
-  - gomod: go.opentelemetry.io/collector/extension/zpagesextension v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.145.0
+  - gomod: go.opentelemetry.io/collector/extension/zpagesextension v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.159.0
 
 exporters:
-  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.145.0
-  - gomod: go.opentelemetry.io/collector/exporter/nopexporter v0.145.0
-  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.145.0
-  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.145.0
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.159.0
+  - gomod: go.opentelemetry.io/collector/exporter/nopexporter v0.159.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.159.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.159.0
 
 processors:
-  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.145.0
-  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.145.0
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.159.0
+  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.159.0
 
 receivers:
-  - gomod: go.opentelemetry.io/collector/receiver/nopreceiver v0.145.0
-  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.145.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.145.0
+  - gomod: go.opentelemetry.io/collector/receiver/nopreceiver v0.159.0
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.159.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.159.0
 
   # Add the Oxide receivers.
-  - gomod: github.com/oxidecomputer/opentelemetry-collector-components v0.5.2
+  - gomod: github.com/oxidecomputer/opentelemetry-collector-components v0.6.0
     import: github.com/oxidecomputer/opentelemetry-collector-components/receiver/oxidemetricsreceiver
-  - gomod: github.com/oxidecomputer/opentelemetry-collector-components v0.5.2
+  - gomod: github.com/oxidecomputer/opentelemetry-collector-components v0.6.0
     import: github.com/oxidecomputer/opentelemetry-collector-components/receiver/oxideauditlogsreceiver
 
 connectors:
-  - gomod: go.opentelemetry.io/collector/connector/forwardconnector v0.145.0
+  - gomod: go.opentelemetry.io/collector/connector/forwardconnector v0.159.0
 
 providers:
-  - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.51.0
-  - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.51.0
-  - gomod: go.opentelemetry.io/collector/confmap/provider/httpprovider v1.51.0
-  - gomod: go.opentelemetry.io/collector/confmap/provider/httpsprovider v1.51.0
-  - gomod: go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.51.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.65.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.65.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/httpprovider v1.65.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/httpsprovider v1.65.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.65.0
 
 replaces:
   - github.com/oxidecomputer/opentelemetry-collector-components => ..
-  # swag/loading@v0.25.4 pins go-openapi/testify@v2.0.2, whose
-  # enable/yaml/v2 imports a now-removed testify/v2/assert/yaml package.
-  # Bump loading to a patch that pins testify@v2.4.0 (existing paths).
-  - github.com/go-openapi/swag/loading => github.com/go-openapi/swag/loading v0.25.5
