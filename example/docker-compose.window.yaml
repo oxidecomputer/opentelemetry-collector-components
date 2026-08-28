@@ -1,0 +1,16 @@
+# Remote write example. Use with:
+#   docker compose -f docker-compose.yaml -f docker-compose.window.yaml up
+
+services:
+  otelcol:
+    volumes:
+    - ../collector/config.window.example.yaml:/etc/otelcol/config.yaml:ro
+    - otelcol_data:/var/lib/otelcol
+
+  prometheus:
+    command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --web.enable-remote-write-receiver
+    volumes:
+    - ./prometheus.window.yml:/etc/prometheus/prometheus.yml:ro
+    - prometheus_data:/prometheus

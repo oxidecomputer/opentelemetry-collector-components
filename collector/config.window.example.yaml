@@ -1,0 +1,55 @@
+receivers:
+  oxide:
+    # Note: uncomment to configure Oxide API authentication. By default, the
+    # collector uses the $OXIDE_{PROFILE,HOST,TOKEN} environment variables.
+    # host: ${env:OXIDE_HOST}
+    # token: ${env:OXIDE_TOKEN}
+    metric_patterns:
+    - .*
+    query_mode: window
+    add_labels: true
+    add_utilization_metrics: true
+    collection_interval: 180s
+    scrape_concurrency: 4
+
+processors:
+  batch:
+
+  # Drop duplicate metrics.
+  #
+  # Metrics from the mwocp68 sensor are duplicated because hubris doesn't account for multiple sensor names within the component: https://github.com/oxidecomputer/hubris/issues/2634. Duplicate metrics cause prometheus remote write to drop the entire batch, so we drop the relevant metrics entirely until the upstream issue is resolved.
+  filter/hubris_2634:
+    error_mode: ignore
+    metrics:
+      datapoint:
+      - 'metric.name == "hardware_component:temperature" and attributes["component_kind"] == "mwocp68"'
+      - 'metric.name == "hardware_component:fan_speed" and attributes["component_kind"] == "mwocp68"'
+
+exporters:
+  prometheusremotewrite:
+    endpoint: "http://prometheus:9090/api/v1/write"
+    tls:
+      insecure: true
+    resource_to_telemetry_conversion:
+      enabled: true
+    timeout: 60s
+
+  file:
+    path: /var/lib/otelcol/metrics.jsonl
+
+service:
+  telemetry:
+    metrics:
+      level: detailed
+      readers:
+      - pull:
+          exporter:
+            prometheus:
+              host: 0.0.0.0
+              port: 8888
+
+  pipelines:
+    metrics:
+      receivers: [oxide]
+      processors: [filter/hubris_2634, batch]
+      exporters: [prometheusremotewrite, file]

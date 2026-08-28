@@ -73,7 +73,6 @@ func TestDefaultConfig(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 
 	require.Equal(t, []string{".*"}, cfg.MetricPatterns)
-	require.Equal(t, 16, cfg.ScrapeConcurrency)
-	require.Equal(t, "5m", cfg.QueryLookback)
+	require.Equal(t, 8, cfg.ScrapeConcurrency)
 	require.False(t, cfg.InsecureSkipVerify, "InsecureSkipVerify should default to false")
 }

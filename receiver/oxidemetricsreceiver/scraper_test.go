@@ -80,11 +80,11 @@ func TestAddLabels(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			resource := pcommon.NewResource()
+			attrs := pcommon.NewMap()
 
-			addLabels(tc.series, resource)
+			addLabels(tc.series, attrs)
 
-			require.Equal(t, tc.wantResource.Attributes().AsRaw(), resource.Attributes().AsRaw())
+			require.Equal(t, tc.wantResource.Attributes().AsRaw(), attrs.AsRaw())
 		})
 	}
 }
@@ -135,7 +135,7 @@ func TestEnrichLabels(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			enrichLabels(tc.resource, tc.silos, tc.projects)
+			enrichLabels(tc.resource.Attributes(), tc.silos, tc.projects)
 			require.Equal(t, tc.wantResource.Attributes().AsRaw(), tc.resource.Attributes().AsRaw())
 		})
 	}
@@ -274,7 +274,7 @@ func TestAddPoint(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dataPoints := pmetric.NewNumberDataPointSlice()
 
-			err := addPoint(dataPoints, tc.series, tc.series.Points.Values[0])
+			err := addPoint(dataPoints, tc.series, tc.series.Points.Values[0], nil, nil)
 
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
@@ -477,7 +477,14 @@ func TestAddHistogram(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			histogramDataPoints := pmetric.NewHistogramDataPointSlice()
 
-			err := addHistogram(histogramDataPoints, table, tc.series, tc.series.Points.Values[0])
+			err := addHistogram(
+				histogramDataPoints,
+				table,
+				tc.series,
+				tc.series.Points.Values[0],
+				nil,
+				nil,
+			)
 
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
