@@ -103,8 +103,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "1 - sum by (sled_id) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",state=\"idle\"}[$__rate_interval])) / sum by (sled_id) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\"}[$__rate_interval]))",
-          "legendFormat": "{{sled_id}}",
+          "expr": "1 - sum by (sled_serial) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",state=\"idle\"}[$__rate_interval])) / sum by (sled_serial) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\"}[$__rate_interval]))",
+          "legendFormat": "{{sled_serial}}",
           "range": true,
           "refId": "A"
         }
@@ -199,8 +199,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "1 - sum by (sled_id, cpu_id) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",state=\"idle\"}[$__rate_interval])) / sum by (sled_id, cpu_id) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\"}[$__rate_interval]))",
-          "legendFormat": "{{sled_id}} cpu {{cpu_id}}",
+          "expr": "1 - sum by (sled_serial, cpu_id) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",state=\"idle\"}[$__rate_interval])) / sum by (sled_serial, cpu_id) (rate(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\"}[$__rate_interval]))",
+          "legendFormat": "{{sled_serial}} cpu {{cpu_id}}",
           "range": true,
           "refId": "A"
         }
@@ -305,7 +305,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_type) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_type!=\"\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
+          "expr": "sum by (zone_type) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",zone_type!=\"\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "{{zone_type}}",
           "range": true,
           "refId": "A"
@@ -399,7 +399,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "topk(20, sum by (zone_name) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",state=~\"sys|user\"}[$__rate_interval]))) / 1e9",
+          "expr": "topk(20, sum by (zone_name) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",state=~\"sys|user\"}[$__rate_interval]))) / 1e9",
           "legendFormat": "{{zone_name}}",
           "range": true,
           "refId": "A"
@@ -494,7 +494,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_type!=\"propolis-server\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
+          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",zone_type!=\"propolis-server\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "control plane",
           "range": true,
           "refId": "A"
@@ -505,7 +505,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_type=\"propolis-server\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
+          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",zone_type=\"propolis-server\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "user instances",
           "range": true,
           "refId": "B"
@@ -600,7 +600,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_type) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_name=~\"oxz_.*\",zone_type!=\"propolis-server\",zone_type!=\"\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
+          "expr": "sum by (zone_type) (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",zone_name=~\"oxz_.*\",zone_type!=\"propolis-server\",zone_type!=\"\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "{{zone_type}}",
           "range": true,
           "refId": "A"
@@ -611,7 +611,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_name=\"oxz_switch\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
+          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",zone_name=\"oxz_switch\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "switch",
           "range": true,
           "refId": "B"
@@ -622,7 +622,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",zone_name=\"global\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
+          "expr": "sum (rate(zone:cpu_nsec_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",zone_name=\"global\",state=~\"sys|user\"}[$__rate_interval])) / 1e9",
           "legendFormat": "global",
           "range": true,
           "refId": "C"
@@ -704,8 +704,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sort_desc(sum by (sled_id) (zfs_pool:bytes_allocated{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\"}) / sum by (sled_id) (zfs_pool:bytes_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\"}))",
-          "legendFormat": "{{sled_id}}",
+          "expr": "sort_desc(sum by (sled_serial) (zfs_pool:bytes_allocated{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\"}) / sum by (sled_serial) (zfs_pool:bytes_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\"}))",
+          "legendFormat": "{{sled_serial}}",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -775,7 +775,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sort_desc(topk(15, zfs_pool:bytes_allocated{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\"} / zfs_pool:bytes_total{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\"}))",
+          "expr": "sort_desc(topk(15, zfs_pool:bytes_allocated{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\"} / zfs_pool:bytes_total{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\"}))",
           "legendFormat": "{{pool_name}}",
           "instant": true,
           "range": false,
@@ -844,7 +844,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sort_desc(topk(15, sum by (dataset_kind) (zfs_dataset:bytes_used{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",dataset_kind!=\"\"})))",
+          "expr": "sort_desc(topk(15, sum by (dataset_kind) (zfs_dataset:bytes_used{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",dataset_kind!=\"\"})))",
           "legendFormat": "{{dataset_kind}}",
           "instant": true,
           "range": false,
@@ -913,7 +913,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sort_desc(topk(15, zfs_dataset:bytes_used{oxide_host=\"$oxide_host\",sled_id=~\"$sled_id\",dataset_kind!=\"\"}))",
+          "expr": "sort_desc(topk(15, zfs_dataset:bytes_used{oxide_host=\"$oxide_host\",sled_serial=~\"$sled_serial\",dataset_kind!=\"\"}))",
           "legendFormat": "{{dataset_name}}",
           "instant": true,
           "range": false,
@@ -958,14 +958,14 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\"}, sled_id)",
+        "definition": "label_values(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\"}, sled_serial)",
         "includeAll": true,
         "multi": true,
-        "name": "sled_id",
+        "name": "sled_serial",
         "label": "Sled",
         "query": {
           "qryType": 1,
-          "query": "label_values(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\"}, sled_id)"
+          "query": "label_values(sled_cpu:cpu_nsec_total{oxide_host=\"$oxide_host\"}, sled_serial)"
         },
         "refresh": 2,
         "regex": "",
