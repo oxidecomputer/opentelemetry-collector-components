@@ -17,7 +17,10 @@ processors:
 
   # Drop duplicate metrics.
   #
-  # Metrics from the mwocp68 sensor are duplicated because hubris doesn't account for multiple sensor names within the component: https://github.com/oxidecomputer/hubris/issues/2634. Duplicate metrics cause prometheus remote write to drop the entire batch, so we drop the relevant metrics entirely until the upstream issue is resolved.
+  # Metrics from the mwocp68 sensor are duplicated because hubris doesn't account for multiple
+  # sensor names within the component: https://github.com/oxidecomputer/hubris/issues/2634.
+  # Duplicate metrics cause prometheus remote write to drop the entire batch, so we drop the
+  # relevant metrics entirely until the upstream issue is resolved.
   filter/hubris_2634:
     error_mode: ignore
     metrics:
@@ -26,7 +29,7 @@ processors:
       - 'metric.name == "hardware_component:fan_speed" and attributes["component_kind"] == "mwocp68"'
 
 exporters:
-  prometheusremotewrite:
+  prometheus_remote_write:
     endpoint: "http://prometheus:9090/api/v1/write"
     tls:
       insecure: true
@@ -52,4 +55,4 @@ service:
     metrics:
       receivers: [oxide]
       processors: [filter/hubris_2634, batch]
-      exporters: [prometheusremotewrite, file]
+      exporters: [prometheus_remote_write, file]

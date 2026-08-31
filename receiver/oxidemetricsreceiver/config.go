@@ -11,10 +11,18 @@ import (
 type Config struct {
 	scraperhelper.ControllerConfig `mapstructure:",squash"`
 
-	Host              string   `mapstructure:"host"`
-	Token             string   `mapstructure:"token"`
-	MetricPatterns    []string `mapstructure:"metric_patterns"`
-	ScrapeConcurrency int      `mapstructure:"scrape_concurrency"`
+	// Host is the Oxide API host URL. Read from the environment by default.
+	Host string `mapstructure:"host"`
+
+	// Token is the Oxide API token. Read from the environment by default.
+	Token string `mapstructure:"token"`
+
+	// MetricsPatterns configures the set of metric names to collect. Defaults to [.*].
+	MetricPatterns []string `mapstructure:"metric_patterns"`
+
+	// ScrapeConcurrency configures the maximum number of concurrent OxQL queries to run. Defaults
+	// to 8.
+	ScrapeConcurrency int `mapstructure:"scrape_concurrency"`
 
 	// QueryMode configures the OxQL query config pattern. If `last`, we use `| last 1` to expose
 	// the most recent value of each series. This is the default behavior, and is appropriate for
@@ -30,7 +38,7 @@ type Config struct {
 
 	// QueryOffset is the offset applied to the end of the query window, only used for the `window`
 	// query mode. Because samples can arrive in oximeter later than their recorded timestamp, we
-	// include an offset so that late-arriving samples aren't dropped. Defaults to 5m.
+	// include an offset so that late-arriving samples aren't dropped. Defaults to 5s.
 	QueryOffset time.Duration `mapstructure:"query_offset"`
 
 	// MaxWindowSize is the longest allowed query window, only used for the `window` query mode. If
