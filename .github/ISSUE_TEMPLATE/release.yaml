@@ -1,7 +1,7 @@
 name: Release
 description: Request a new release to be published.
 title: "Release: OpenTelemetry Collector Components"
-projects: ["oxidecomputer/116"]
+labels: ["OpenTelemetry Collector", "Task"]
 body:
   - type: markdown
     attributes:
