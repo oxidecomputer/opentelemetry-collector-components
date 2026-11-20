@@ -249,6 +249,13 @@ func (s *auditLogScraper) loadCursor() (cursor, bool) {
 		s.logger.Warn("cursor file missing time_completed", zap.String("path", s.cfg.CursorPath))
 		return cursor{}, false
 	}
+	if now := time.Now(); c.TimeCompleted.After(now) {
+		s.logger.Warn("cursor file time_completed is in the future, clamping to now",
+			zap.String("path", s.cfg.CursorPath),
+			zap.Timep("time_completed", c.TimeCompleted),
+		)
+		c = cursor{TimeCompleted: &now}
+	}
 	return c, true
 }
 

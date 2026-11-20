@@ -331,3 +331,19 @@ func TestCursorPersistence(t *testing.T) {
 	require.Equal(t, "id-2", s2.cursor.ID)
 	require.Equal(t, t2, *s2.cursor.TimeCompleted)
 }
+
+func TestFutureCursorClamped(t *testing.T) {
+	cursorPath := filepath.Join(t.TempDir(), "cursor.json")
+	future := time.Now().Add(time.Hour)
+	data, err := json.Marshal(cursor{TimeCompleted: &future, ID: "id-1"})
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(cursorPath, data, 0o600))
+
+	cfg := &Config{InitialLookback: 24 * time.Hour, CursorPath: cursorPath}
+	client := &mockAuditLogClient{host: "https://example.oxide.computer"}
+	s := newAuditLogScraper(cfg, componenttest.NewNopTelemetrySettings(), client)
+	require.NoError(t, s.Start(context.Background(), nil))
+
+	require.Empty(t, s.cursor.ID)
+	require.WithinDuration(t, time.Now(), *s.cursor.TimeCompleted, 5*time.Second)
+}
