@@ -13,8 +13,8 @@ services:
     - ../collector/config.yaml:/etc/otelcol/config.yaml:ro
     - otelcol_data:/var/lib/otelcol
     ports:
-    - "9091:9091"
-    - "8888:8888"
+    - "127.0.0.1:9091:9091"
+    - "127.0.0.1:8888:8888"
 
   prometheus:
     image: prom/prometheus:latest
@@ -22,7 +22,7 @@ services:
     - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     - prometheus_data:/prometheus
     ports:
-    - "9090:9090"
+    - "127.0.0.1:9090:9090"
     depends_on:
     - otelcol
 
@@ -30,7 +30,7 @@ services:
     image: grafana/loki:3
     command: -config.file=/etc/loki/config.yaml
     ports:
-    - "3100:3100"
+    - "127.0.0.1:3100:3100"
     volumes:
     - ./loki.yaml:/etc/loki/config.yaml:ro
     - loki_data:/loki
@@ -39,9 +39,9 @@ services:
     image: grafana/grafana:latest
     environment:
     - GF_AUTH_ANONYMOUS_ENABLED=true
-    - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     ports:
-    - "3000:3000"
+    - "127.0.0.1:3000:3000"
     volumes:
     - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
     - ./grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
