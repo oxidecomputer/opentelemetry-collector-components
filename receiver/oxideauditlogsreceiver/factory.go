@@ -37,7 +37,7 @@ func makeOxideClientOptions(cfg *Config) []oxide.ClientOption {
 		opts = append(opts, oxide.WithHost(cfg.Host))
 	}
 	if cfg.Token != "" {
-		opts = append(opts, oxide.WithToken(cfg.Token))
+		opts = append(opts, oxide.WithToken(string(cfg.Token)))
 	}
 
 	if cfg.InsecureSkipVerify {

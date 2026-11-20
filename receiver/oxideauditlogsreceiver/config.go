@@ -3,14 +3,15 @@ package oxideauditlogsreceiver
 import (
 	"time"
 
+	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/scraper/scraperhelper"
 )
 
 type Config struct {
 	scraperhelper.ControllerConfig `mapstructure:",squash"`
 
-	Host  string `mapstructure:"host"`
-	Token string `mapstructure:"token"`
+	Host  string              `mapstructure:"host"`
+	Token configopaque.String `mapstructure:"token"`
 
 	// InitialLookback configures how far back to query on the first scrape.
 	InitialLookback time.Duration `mapstructure:"initial_lookback"`

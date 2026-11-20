@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"time"
 
+	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/scraper/scraperhelper"
 )
 
@@ -15,7 +16,7 @@ type Config struct {
 	Host string `mapstructure:"host"`
 
 	// Token is the Oxide API token. Read from the environment by default.
-	Token string `mapstructure:"token"`
+	Token configopaque.String `mapstructure:"token"`
 
 	// MetricsPatterns configures the set of metric names to collect. Defaults to [.*].
 	MetricPatterns []string `mapstructure:"metric_patterns"`
