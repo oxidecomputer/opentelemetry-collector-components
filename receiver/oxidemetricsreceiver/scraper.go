@@ -589,6 +589,13 @@ func addHistogram(
 ) error {
 	timestamps := series.Points.Timestamps
 	startTimes := series.Points.StartTimes
+	if len(startTimes) > 0 && len(startTimes) != len(timestamps) {
+		return fmt.Errorf(
+			"invariant violated: number of start times %d must match number of timestamps %d",
+			len(startTimes),
+			len(timestamps),
+		)
+	}
 
 	switch v := metricValue.Values.Value.(type) {
 	case *oxide.ValueArrayIntegerDistribution:
@@ -695,6 +702,13 @@ func addPoint(
 ) error {
 	timestamps := series.Points.Timestamps
 	startTimes := series.Points.StartTimes
+	if len(startTimes) > 0 && len(startTimes) != len(timestamps) {
+		return fmt.Errorf(
+			"invariant violated: number of start times %d must match number of timestamps %d",
+			len(startTimes),
+			len(timestamps),
+		)
+	}
 	hasStartTimes := len(startTimes) > 0
 	switch v := metricValue.Values.Value.(type) {
 	case *oxide.ValueArrayInteger:
