@@ -252,6 +252,26 @@ func TestAddPoint(t *testing.T) {
 				}(),
 			},
 		},
+		// Error case: fewer start times than timestamps
+		{
+			name: "fewer start times than timestamps",
+			series: oxide.Timeseries{
+				Points: oxide.Points{
+					StartTimes: []time.Time{startTime},
+					Timestamps: []time.Time{now, now.Add(time.Second)},
+					Values: []oxide.Values{
+						{
+							Values: oxide.ValueArray{
+								Value: &oxide.ValueArrayInteger{
+									Values: []*int{oxide.NewPointer(1), oxide.NewPointer(2)},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "number of start times 1 must match number of timestamps 2",
+		},
 		// Error case: unexpected type
 		{
 			name: "unexpected type",
@@ -455,6 +475,28 @@ func TestAddHistogram(t *testing.T) {
 					return dp
 				}(),
 			},
+		},
+		{
+			name: "fewer start times than timestamps",
+			series: oxide.Timeseries{
+				Points: oxide.Points{
+					StartTimes: []time.Time{startTime},
+					Timestamps: []time.Time{now, now.Add(time.Second)},
+					Values: []oxide.Values{
+						{
+							Values: oxide.ValueArray{
+								Value: &oxide.ValueArrayIntegerDistribution{
+									Values: []*oxide.Distributionint64{
+										{Bins: []int{0, 1}, Counts: []uint64{1, 2}},
+										{Bins: []int{0, 1}, Counts: []uint64{3, 4}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "number of start times 1 must match number of timestamps 2",
 		},
 		{
 			name: "unexpected type",
