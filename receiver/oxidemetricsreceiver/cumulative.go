@@ -108,9 +108,14 @@ func cloneDistInt(d *oxide.Distributionint64) *oxide.Distributionint64 {
 	bins := make([]int, len(d.Bins))
 	copy(counts, d.Counts)
 	copy(bins, d.Bins)
+	var sum *int
+	if d.SumOfSamples != nil {
+		sum = oxide.NewPointer(*d.SumOfSamples)
+	}
 	return &oxide.Distributionint64{
-		Bins:   bins,
-		Counts: counts,
+		Bins:         bins,
+		Counts:       counts,
+		SumOfSamples: sum,
 	}
 }
 
@@ -120,8 +125,9 @@ func cloneDistDouble(d *oxide.Distributiondouble) *oxide.Distributiondouble {
 	copy(counts, d.Counts)
 	copy(bins, d.Bins)
 	return &oxide.Distributiondouble{
-		Bins:   bins,
-		Counts: counts,
+		Bins:         bins,
+		Counts:       counts,
+		SumOfSamples: d.SumOfSamples,
 	}
 }
 
@@ -131,6 +137,12 @@ func accumulateDistInt(cumulative *oxide.Distributionint64, delta oxide.Distribu
 			cumulative.Counts[binIdx] += delta.Counts[binIdx]
 		}
 	}
+	if delta.SumOfSamples != nil {
+		if cumulative.SumOfSamples == nil {
+			cumulative.SumOfSamples = new(int)
+		}
+		*cumulative.SumOfSamples += *delta.SumOfSamples
+	}
 }
 
 func accumulateDistDouble(cumulative *oxide.Distributiondouble, delta oxide.Distributiondouble) {
@@ -139,4 +151,5 @@ func accumulateDistDouble(cumulative *oxide.Distributiondouble, delta oxide.Dist
 			cumulative.Counts[binIdx] += delta.Counts[binIdx]
 		}
 	}
+	cumulative.SumOfSamples += delta.SumOfSamples
 }

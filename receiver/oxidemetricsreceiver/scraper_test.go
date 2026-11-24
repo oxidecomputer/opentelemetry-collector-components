@@ -410,11 +410,12 @@ func TestAddHistogram(t *testing.T) {
 								Value: &oxide.ValueArrayIntegerDistribution{
 									Values: []*oxide.Distributionint64{
 										{
-											Bins:   []int{0, 1, 2},
-											Counts: []uint64{1, 2, 3},
-											P50:    1.5,
-											P90:    1.9,
-											P99:    1.99,
+											Bins:         []int{0, 1, 2},
+											Counts:       []uint64{1, 2, 3},
+											SumOfSamples: oxide.NewPointer(10),
+											P50:          1.5,
+											P90:          1.9,
+											P99:          1.99,
 										},
 										// Note: Add a nil value to ensure that it's dropped as
 										// expected.
@@ -432,6 +433,7 @@ func TestAddHistogram(t *testing.T) {
 					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
 					dp.SetCount(6) // 1+2+3
+					dp.SetSum(10)
 					dp.ExplicitBounds().FromRaw([]float64{1, 2})
 					dp.BucketCounts().FromRaw([]uint64{1, 2, 3})
 					return dp
@@ -450,11 +452,12 @@ func TestAddHistogram(t *testing.T) {
 								Value: &oxide.ValueArrayDoubleDistribution{
 									Values: []*oxide.Distributiondouble{
 										{
-											Bins:   []float64{0.0, 1.0, 2.0},
-											Counts: []uint64{1, 2, 3},
-											P50:    1.5,
-											P90:    1.9,
-											P99:    1.99,
+											Bins:         []float64{0.0, 1.0, 2.0},
+											Counts:       []uint64{1, 2, 3},
+											SumOfSamples: 10,
+											P50:          1.5,
+											P90:          1.9,
+											P99:          1.99,
 										},
 										nil,
 									},
@@ -470,6 +473,7 @@ func TestAddHistogram(t *testing.T) {
 					dp.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 					dp.SetTimestamp(pcommon.NewTimestampFromTime(now))
 					dp.SetCount(6) // 1+2+3
+					dp.SetSum(10)
 					dp.ExplicitBounds().FromRaw([]float64{1.0, 2.0})
 					dp.BucketCounts().FromRaw([]uint64{1, 2, 3})
 					return dp

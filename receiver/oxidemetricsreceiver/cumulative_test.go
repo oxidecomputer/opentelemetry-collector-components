@@ -178,9 +178,21 @@ func TestAccumulate_IntegerDistribution(t *testing.T) {
 					Values: oxide.ValueArray{
 						Value: &oxide.ValueArrayIntegerDistribution{
 							Values: []*oxide.Distributionint64{
-								{Bins: []int{10, 100}, Counts: []uint64{5, 3, 2}},
-								{Bins: []int{10, 100}, Counts: []uint64{1, 1, 0}},
-								{Bins: []int{10, 100}, Counts: []uint64{2, 0, 1}},
+								{
+									Bins:         []int{10, 100},
+									Counts:       []uint64{5, 3, 2},
+									SumOfSamples: oxide.NewPointer(400),
+								},
+								{
+									Bins:         []int{10, 100},
+									Counts:       []uint64{1, 1, 0},
+									SumOfSamples: oxide.NewPointer(25),
+								},
+								{
+									Bins:         []int{10, 100},
+									Counts:       []uint64{2, 0, 1},
+									SumOfSamples: oxide.NewPointer(150),
+								},
 							},
 						},
 					},
@@ -196,6 +208,9 @@ func TestAccumulate_IntegerDistribution(t *testing.T) {
 	require.Equal(t, []uint64{5, 3, 2}, v.Values[0].Counts)
 	require.Equal(t, []uint64{6, 4, 2}, v.Values[1].Counts)
 	require.Equal(t, []uint64{8, 4, 3}, v.Values[2].Counts)
+	require.Equal(t, 400, *v.Values[0].SumOfSamples)
+	require.Equal(t, 425, *v.Values[1].SumOfSamples)
+	require.Equal(t, 575, *v.Values[2].SumOfSamples)
 }
 
 func TestAccumulate_DoubleDistribution(t *testing.T) {
@@ -209,8 +224,16 @@ func TestAccumulate_DoubleDistribution(t *testing.T) {
 					Values: oxide.ValueArray{
 						Value: &oxide.ValueArrayDoubleDistribution{
 							Values: []*oxide.Distributiondouble{
-								{Bins: []float64{1.0, 10.0}, Counts: []uint64{10, 5, 3}},
-								{Bins: []float64{1.0, 10.0}, Counts: []uint64{2, 1, 0}},
+								{
+									Bins:         []float64{1.0, 10.0},
+									Counts:       []uint64{10, 5, 3},
+									SumOfSamples: 60.5,
+								},
+								{
+									Bins:         []float64{1.0, 10.0},
+									Counts:       []uint64{2, 1, 0},
+									SumOfSamples: 4.25,
+								},
 							},
 						},
 					},
@@ -225,6 +248,8 @@ func TestAccumulate_DoubleDistribution(t *testing.T) {
 	v := got.Points.Values[0].Values.Value.(*oxide.ValueArrayDoubleDistribution)
 	require.Equal(t, []uint64{10, 5, 3}, v.Values[0].Counts)
 	require.Equal(t, []uint64{12, 6, 3}, v.Values[1].Counts)
+	require.InDelta(t, 60.5, v.Values[0].SumOfSamples, 1e-9)
+	require.InDelta(t, 64.75, v.Values[1].SumOfSamples, 1e-9)
 }
 
 func TestAccumulate_Distribution_Reset(t *testing.T) {
@@ -238,9 +263,21 @@ func TestAccumulate_Distribution_Reset(t *testing.T) {
 					Values: oxide.ValueArray{
 						Value: &oxide.ValueArrayIntegerDistribution{
 							Values: []*oxide.Distributionint64{
-								{Bins: []int{10, 100}, Counts: []uint64{5, 3, 2}},
-								{Bins: []int{10, 100}, Counts: []uint64{1, 1, 0}},
-								{Bins: []int{10, 100}, Counts: []uint64{7, 0, 0}}, // reset
+								{
+									Bins:         []int{10, 100},
+									Counts:       []uint64{5, 3, 2},
+									SumOfSamples: oxide.NewPointer(400),
+								},
+								{
+									Bins:         []int{10, 100},
+									Counts:       []uint64{1, 1, 0},
+									SumOfSamples: oxide.NewPointer(25),
+								},
+								{
+									Bins:         []int{10, 100},
+									Counts:       []uint64{7, 0, 0},
+									SumOfSamples: oxide.NewPointer(35),
+								}, // reset
 							},
 						},
 					},
@@ -256,6 +293,9 @@ func TestAccumulate_Distribution_Reset(t *testing.T) {
 	require.Equal(t, []uint64{5, 3, 2}, v.Values[0].Counts)
 	require.Equal(t, []uint64{6, 4, 2}, v.Values[1].Counts)
 	require.Equal(t, []uint64{7, 0, 0}, v.Values[2].Counts) // fresh start
+	require.Equal(t, 400, *v.Values[0].SumOfSamples)
+	require.Equal(t, 425, *v.Values[1].SumOfSamples)
+	require.Equal(t, 35, *v.Values[2].SumOfSamples)
 }
 
 func derefSlice[T any](values []*T) []T {
