@@ -646,6 +646,10 @@ func addHistogram(
 			}
 			dp.SetCount(total)
 
+			if distValue.SumOfSamples != nil {
+				dp.SetSum(float64(*distValue.SumOfSamples))
+			}
+
 			addLabels(series, dp.Attributes())
 			enrichLabels(dp.Attributes(), silos, projects)
 		}
@@ -679,6 +683,7 @@ func addHistogram(
 				total += count
 			}
 			dp.SetCount(total)
+			dp.SetSum(distValue.SumOfSamples)
 
 			addLabels(series, dp.Attributes())
 			enrichLabels(dp.Attributes(), silos, projects)
