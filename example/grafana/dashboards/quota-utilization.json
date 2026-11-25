@@ -17,7 +17,7 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [],
   "panels": [
@@ -29,17 +29,185 @@
         "x": 0,
         "y": 0
       },
-      "id": 9,
+      "id": 1,
       "panels": [],
       "title": "CPU",
-      "type": "row",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
-          "thresholds": {
-            "steps": null
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Capacity|Provisioned"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "suffix: vCPU"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Utilization"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 14,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "Capacity",
+            "Provisioned"
+          ],
+          "countRows": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Utilization"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:cpu_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:cpu_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\"))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:cpu_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:cpu_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\"))",
+          "format": "table",
+          "instant": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:cpu_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:cpu_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) / ((max by (silo_id, silo_name) (silo_quota:cpu_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:cpu_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) > 0)",
+          "format": "table",
+          "instant": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Silo quota utilization",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "silo_id": true
+            },
+            "indexByName": {
+              "silo_name": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3
+            },
+            "renameByName": {
+              "silo_name": "Silo",
+              "Value #A": "Capacity",
+              "Value #B": "Provisioned",
+              "Value #C": "Utilization"
+            }
           }
         }
-      }
+      ],
+      "type": "table"
     },
     {
       "datasource": {
@@ -49,10 +217,10 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-GrYlRd"
+            "mode": "fixed",
+            "fixedColor": "blue"
           },
           "mappings": [],
-          "max": 1,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -63,17 +231,17 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "suffix: vCPU"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
+        "h": 10,
+        "w": 10,
+        "x": 14,
         "y": 1
       },
-      "id": 2,
+      "id": 3,
       "options": {
         "displayMode": "basic",
         "namePlacement": "left",
@@ -88,7 +256,6 @@
         "showUnfilled": false,
         "valueMode": "color"
       },
-      "pluginVersion": "12.2.1",
       "targets": [
         {
           "datasource": {
@@ -96,13 +263,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sort_desc(sum by(silo_name) (silo_utilization_cpu{type=\"provisioned\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}) / sum by(silo_name) (silo_utilization_cpu{type=\"allocated\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}))",
-          "legendFormat": "{{silo_name}}",
+          "expr": "sort_desc(topk(10, (max by (silo_name, project_id, project_name) (project_quota:cpu_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", project_name!=\"\"}) or label_replace(max by (silo_name, project_id) (project_quota:cpu_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", project_name=\"\"}), \"project_name\", \"$1\", \"project_id\", \"(.*)\")) > 0))",
           "instant": true,
+          "legendFormat": "{{silo_name}} / {{project_name}}",
           "refId": "A"
         }
       ],
-      "title": "Quota utilization (provisioned / allocated)",
+      "title": "Top projects by provisioned",
       "type": "bargauge"
     },
     {
@@ -113,76 +280,65 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "showPoints": "never"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
+          "min": 0,
+          "max": 1,
+          "unit": "percentunit"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byValue",
+              "options": {
+                "reducer": "max",
+                "op": "lte",
                 "value": 0
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": true
+                }
               }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 1
+        "w": 24,
+        "x": 0,
+        "y": 11
       },
-      "id": 11,
+      "id": 4,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Last *",
+          "sortDesc": true
         },
         "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
-      "pluginVersion": "12.2.1",
       "targets": [
         {
           "datasource": {
@@ -190,13 +346,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by(silo_name) (silo_utilization_cpu{type=\"provisioned\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"})",
-          "legendFormat": "__auto",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:cpu_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:cpu_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) / ((max by (silo_id, silo_name) (silo_quota:cpu_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:cpu_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) > 0)",
+          "legendFormat": "{{silo_name}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Provisioned by silo",
+      "title": "Silo quota utilization over time",
       "type": "timeseries"
     },
     {
@@ -205,19 +361,187 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 19
       },
-      "id": 8,
+      "id": 5,
       "panels": [],
       "title": "Memory",
-      "type": "row",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
-          "thresholds": {
-            "steps": null
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Capacity|Provisioned"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Utilization"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 14,
+        "x": 0,
+        "y": 20
+      },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "Capacity",
+            "Provisioned"
+          ],
+          "countRows": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Utilization"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:memory_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:memory_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\"))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:memory_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:memory_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\"))",
+          "format": "table",
+          "instant": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:memory_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:memory_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) / ((max by (silo_id, silo_name) (silo_quota:memory_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:memory_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) > 0)",
+          "format": "table",
+          "instant": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Silo quota utilization",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "silo_id": true
+            },
+            "indexByName": {
+              "silo_name": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3
+            },
+            "renameByName": {
+              "silo_name": "Silo",
+              "Value #A": "Capacity",
+              "Value #B": "Provisioned",
+              "Value #C": "Utilization"
+            }
           }
         }
-      }
+      ],
+      "type": "table"
     },
     {
       "datasource": {
@@ -227,10 +551,10 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-GrYlRd"
+            "mode": "fixed",
+            "fixedColor": "blue"
           },
           "mappings": [],
-          "max": 1,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -241,15 +565,15 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "bytes"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 10
+        "h": 10,
+        "w": 10,
+        "x": 14,
+        "y": 20
       },
       "id": 7,
       "options": {
@@ -266,7 +590,6 @@
         "showUnfilled": false,
         "valueMode": "color"
       },
-      "pluginVersion": "12.2.1",
       "targets": [
         {
           "datasource": {
@@ -274,13 +597,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sort_desc(sum by(silo_name) (silo_utilization_memory{type=\"provisioned\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}) / sum by(silo_name) (silo_utilization_memory{type=\"allocated\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}))",
-          "legendFormat": "{{silo_name}}",
+          "expr": "sort_desc(topk(10, (max by (silo_name, project_id, project_name) (project_quota:memory_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", project_name!=\"\"}) or label_replace(max by (silo_name, project_id) (project_quota:memory_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", project_name=\"\"}), \"project_name\", \"$1\", \"project_id\", \"(.*)\")) > 0))",
           "instant": true,
+          "legendFormat": "{{silo_name}} / {{project_name}}",
           "refId": "A"
         }
       ],
-      "title": "Quota utilization (provisioned / allocated)",
+      "title": "Top projects by provisioned",
       "type": "bargauge"
     },
     {
@@ -291,77 +614,65 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "showPoints": "never"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
+          "min": 0,
+          "max": 1,
+          "unit": "percentunit"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byValue",
+              "options": {
+                "reducer": "max",
+                "op": "lte",
                 "value": 0
               }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": true
+                }
+              }
             ]
-          },
-          "unit": "decbytes"
-        },
-        "overrides": []
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 10
+        "w": 24,
+        "x": 0,
+        "y": 30
       },
-      "id": 12,
+      "id": 8,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Last *",
+          "sortDesc": true
         },
         "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
-      "pluginVersion": "12.2.1",
       "targets": [
         {
           "datasource": {
@@ -369,13 +680,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by(silo_name) (silo_utilization_memory{type=\"provisioned\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"})",
-          "legendFormat": "__auto",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:memory_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:memory_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) / ((max by (silo_id, silo_name) (silo_quota:memory_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:memory_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) > 0)",
+          "legendFormat": "{{silo_name}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Provisioned by silo",
+      "title": "Silo quota utilization over time",
       "type": "timeseries"
     },
     {
@@ -384,19 +695,187 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 38
       },
-      "id": 10,
+      "id": 9,
       "panels": [],
-      "title": "Disk",
-      "type": "row",
+      "title": "Virtual storage",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
-          "thresholds": {
-            "steps": null
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Capacity|Provisioned"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Utilization"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 14,
+        "x": 0,
+        "y": 39
+      },
+      "id": 10,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "Capacity",
+            "Provisioned"
+          ],
+          "countRows": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Utilization"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:virtual_storage_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:virtual_storage_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\"))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:virtual_storage_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:virtual_storage_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\"))",
+          "format": "table",
+          "instant": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:virtual_storage_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:virtual_storage_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) / ((max by (silo_id, silo_name) (silo_quota:virtual_storage_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:virtual_storage_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) > 0)",
+          "format": "table",
+          "instant": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Silo quota utilization",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "silo_id": true
+            },
+            "indexByName": {
+              "silo_name": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3
+            },
+            "renameByName": {
+              "silo_name": "Silo",
+              "Value #A": "Capacity",
+              "Value #B": "Provisioned",
+              "Value #C": "Utilization"
+            }
           }
         }
-      }
+      ],
+      "type": "table"
     },
     {
       "datasource": {
@@ -406,10 +885,10 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-GrYlRd"
+            "mode": "fixed",
+            "fixedColor": "blue"
           },
           "mappings": [],
-          "max": 1,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -420,17 +899,17 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "bytes"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 19
+        "h": 10,
+        "w": 10,
+        "x": 14,
+        "y": 39
       },
-      "id": 4,
+      "id": 11,
       "options": {
         "displayMode": "basic",
         "namePlacement": "left",
@@ -445,7 +924,6 @@
         "showUnfilled": false,
         "valueMode": "color"
       },
-      "pluginVersion": "12.2.1",
       "targets": [
         {
           "datasource": {
@@ -453,13 +931,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sort_desc(sum by(silo_name) (silo_utilization_disk{type=\"provisioned\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}) / sum by(silo_name) (silo_utilization_disk{type=\"allocated\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"}))",
-          "legendFormat": "{{silo_name}}",
+          "expr": "sort_desc(topk(10, (max by (silo_name, project_id, project_name) (project_quota:virtual_storage_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", project_name!=\"\"}) or label_replace(max by (silo_name, project_id) (project_quota:virtual_storage_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", project_name=\"\"}), \"project_name\", \"$1\", \"project_id\", \"(.*)\")) > 0))",
           "instant": true,
+          "legendFormat": "{{silo_name}} / {{project_name}}",
           "refId": "A"
         }
       ],
-      "title": "Quota utilization (provisioned / allocated)",
+      "title": "Top projects by provisioned",
       "type": "bargauge"
     },
     {
@@ -470,77 +948,65 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "showPoints": "never"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
+          "min": 0,
+          "max": 1,
+          "unit": "percentunit"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byValue",
+              "options": {
+                "reducer": "max",
+                "op": "lte",
                 "value": 0
               }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": true
+                }
+              }
             ]
-          },
-          "unit": "decbytes"
-        },
-        "overrides": []
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 19
+        "w": 24,
+        "x": 0,
+        "y": 49
       },
-      "id": 6,
+      "id": 12,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+          "calcs": [
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Last *",
+          "sortDesc": true
         },
         "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
-      "pluginVersion": "12.2.1",
       "targets": [
         {
           "datasource": {
@@ -548,13 +1014,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by(silo_name) (silo_utilization_disk{type=\"provisioned\", oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\"})",
-          "legendFormat": "__auto",
+          "expr": "(max by (silo_id, silo_name) (silo_quota:virtual_storage_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:virtual_storage_provisioned{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) / ((max by (silo_id, silo_name) (silo_quota:virtual_storage_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name!=\"\"}) or label_replace(max by (silo_id) (silo_quota:virtual_storage_capacity{oxide_host=\"$oxide_host\", silo_name=~\"$silo_name\", silo_name=\"\"}), \"silo_name\", \"$1\", \"silo_id\", \"(.*)\")) > 0)",
+          "legendFormat": "{{silo_name}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Provisioned by silo",
+      "title": "Silo quota utilization over time",
       "type": "timeseries"
     }
   ],
@@ -564,14 +1030,14 @@
   "templating": {
     "list": [
       {
-        "name": "datasource",
-        "type": "datasource",
-        "query": "prometheus",
         "current": {
           "text": "Prometheus",
           "value": "prometheus"
         },
-        "regex": ""
+        "name": "datasource",
+        "query": "prometheus",
+        "regex": "",
+        "type": "datasource"
       },
       {
         "current": {
@@ -582,18 +1048,19 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(oxide_host)",
+        "definition": "label_values(silo_quota:cpu_capacity, oxide_host)",
         "multi": false,
         "name": "oxide_host",
         "query": {
           "qryType": 1,
-          "query": "label_values(oxide_host)"
+          "query": "label_values(silo_quota:cpu_capacity, oxide_host)"
         },
         "refresh": 2,
         "sort": 1,
         "type": "query"
       },
       {
+        "allValue": ".*",
         "current": {
           "text": [
             "All"
@@ -602,30 +1069,32 @@
             "$__all"
           ]
         },
-        "allValue": ".*",
-        "definition": "label_values(silo_utilization_cpu{oxide_host=\"$oxide_host\"},silo_name)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(silo_quota:cpu_capacity{oxide_host=\"$oxide_host\"}, silo_name)",
         "includeAll": true,
         "multi": true,
         "name": "silo_name",
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(silo_utilization_cpu{oxide_host=\"$oxide_host\"},silo_name)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          "query": "label_values(silo_quota:cpu_capacity{oxide_host=\"$oxide_host\"}, silo_name)"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
+        "sort": 1,
         "type": "query"
       }
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "Quota utilization",
-  "uid": "quota-utilization",
-  "version": 10
+  "uid": "quota-utilization"
 }
